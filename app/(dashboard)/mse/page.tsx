@@ -16,9 +16,15 @@ export default async function MsePage() {
 
     return (
         <div>
-            <div className="mb-6">
-                <h1 className="text-xl font-medium text-gray-900">MSE Tracker</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Malawi Stock Exchange — all 16 counters</p>
+            
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h1 className="text-xl font-medium text-gray-900">MSE Tracker</h1>
+                    <p className="text-sm text-gray-500 mt-0.5">Malawi Stock Exchange — all 16 counters</p>
+                </div>
+                <Link href="/mse/compare" className="text-sm bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    Compare stocks
+                </Link>
             </div>
 
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
