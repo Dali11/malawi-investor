@@ -34,10 +34,11 @@ export default async function DashboardLayout({
                     {[
                         { href: '/analysis', label: 'Daily Analysis', icon: '📊' },
                         { href: '/learn', label: 'Learn', icon: '📚' },
-                        { href: '/simulator', label: 'Simulator', icon: '📈' },
+                        { href: '/simulator', label: 'Inv. Simulator', icon: '📈' },
                         { href: '/mentorship', label: 'Mentorship', icon: '🎯' },
                         { href: '/community', label: 'Community', icon: '💬' },
                         { href: '/mse', label: 'MSE Tracker', icon: '🏦' },
+                        { href: '/mse/watchlist', label: 'Watchlist', icon: '⭐' },
                     ].map(item => (
                         <Link
                             key={item.href}

@@ -11,7 +11,7 @@ export default function SimulatorClient({
     transactions,
     userId,
 }: any) {
-    const [tab, setTab] = useState<'portfolio' | 'trade' | 'history'>('portfolio')
+    const [tab, setTab] = useState<'portfolio' | 'invest' | 'history'>('portfolio')
     const [selectedCounter, setSelectedCounter] = useState('')
     const [shares, setShares] = useState('')
     const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy')
@@ -100,7 +100,7 @@ export default function SimulatorClient({
             total_value: total
         })
 
-        setMessage(`${tradeType === 'buy' ? 'Bought' : 'Sold'} ${numShares} shares successfully`)
+        setMessage(`${tradeType === 'buy' ? 'Invested in' : 'Divested from'} ${numShares} shares successfully`)
         setShares('')
         setLoading(false)
         router.refresh()
@@ -116,8 +116,8 @@ export default function SimulatorClient({
     return (
         <div>
             <div className="mb-6">
-                <h1 className="text-xl font-medium text-gray-900">Trading Simulator</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Practice with MK 1,000,000 — real MSE prices, no real money</p>
+                <h1 className="text-xl font-medium text-gray-900">Investment Simulator</h1>
+                <p className="text-sm text-gray-500 mt-0.5">Practice with MK 1,000,000 — real MSE prices, no real money</p> 
             </div>
 
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -138,7 +138,7 @@ export default function SimulatorClient({
             </div>
 
             <div className="flex gap-2 mb-4">
-                {(['portfolio', 'trade', 'history'] as const).map(t => (
+                {(['portfolio', 'invest', 'history'] as const).map(t => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
@@ -254,7 +254,7 @@ export default function SimulatorClient({
                             disabled={loading || !selectedCounter || !shares}
                             className={`w-full text-white text-sm font-medium py-2 rounded-lg transition-colors disabled:opacity-50 ${tradeType === 'buy' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-500 hover:bg-red-600'}`}
                         >
-                            {loading ? 'Processing...' : `${tradeType === 'buy' ? 'Buy' : 'Sell'} shares`}
+                            {loading ? 'Processing...' : `${tradeType === 'buy' ? 'Invest' : 'Divest'} shares`}
                         </button>
                     </div>
                 </div>
