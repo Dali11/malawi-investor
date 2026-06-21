@@ -39,6 +39,7 @@ export default async function DashboardLayout({
                         { href: '/community', label: 'Community', icon: '💬' },
                         { href: '/mse', label: 'MSE Tracker', icon: '🏦' },
                         { href: '/mse/watchlist', label: 'Watchlist', icon: '⭐' },
+                        { href: '/mse/rankings', label: 'Rankings', icon: '🏆' },
                     ].map(item => (
                         <Link
                             key={item.href}
