@@ -51,7 +51,7 @@ export default async function HomePage() {
     .from('community_threads')
     .select('id, title, reply_count, mse_counters(symbol)')
     .order('created_at', { ascending: false })
-    .limit(3)
+    .limit(6)
 
   // Course previews
   const { data: courses } = await supabase
@@ -68,8 +68,10 @@ export default async function HomePage() {
         <MarketSnapshot movers={snapshot} />
       </div>
       <LatestAnalysis items={latest} />
-      <MarketMovers gainers={gainers} losers={losers} />
-      <CommunityPulse threads={threads ?? []} />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1.4fr]">
+        <MarketMovers gainers={gainers} losers={losers} />
+        <CommunityPulse threads={threads ?? []} />
+      </div>
       <GlossaryPreview items={glossary ?? []} />
       <CoursePreviews courses={courses ?? []} />
       <JoinCta />

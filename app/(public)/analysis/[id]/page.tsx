@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDistanceToNow } from 'date-fns'
 import { notFound } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
 
 export default async function AnalysisArticlePage({
     params,
@@ -13,7 +14,7 @@ export default async function AnalysisArticlePage({
 
     const { data: article } = await supabase
         .from('analyses')
-        .select('id, title, content, created_at, price_at_post, pe_at_post, market_cap_at_post, mse_counters(symbol, company_name)')
+        .select('id, title, content, created_at, image_url, price_at_post, pe_at_post, market_cap_at_post, mse_counters(symbol, company_name)')
         .eq('id', id)
         .eq('published', true)
         .single()
@@ -23,136 +24,188 @@ export default async function AnalysisArticlePage({
     const symbol = (article as any).mse_counters?.symbol
     const company = (article as any).mse_counters?.company_name
 
-    // // Fetch latest price for this counter
-    // const { data: latestPrice } = symbol ? await supabase
-    //     .from('mse_prices')
-    //     .select('price, change_pct')
-    //     .eq('counter_id', supabase.from('mse_counters').select('id').eq('symbol', symbol).limit(1))
-    //     .order('price_date', { ascending: false })
-    //     .limit(1)
-    //     .then(r => r) : { data: null }
+    // Related articles — same counter, exclude current
+    const { data: related } = symbol ? await supabase
+        .from('analyses')
+        .select('id, title, created_at, image_url, mse_counters(symbol)')
+        .eq('published', true)
+        .neq('id', id)
+        .order('created_at', { ascending: false })
+        .limit(3) : { data: [] }
 
     return (
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_240px]">
 
-            {/* Breadcrumb */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: '1.25rem' }}>
-                <Link href="/analysis" style={{ color: 'var(--color-text-info)', textDecoration: 'none' }}>Analysis</Link>
-                <span>›</span>
-                {symbol && <span style={{ color: 'var(--color-text-info)' }}>{symbol}</span>}
-                {symbol && <span>›</span>}
-                <span>Article</span>
-            </div>
-
-            {/* Stock badge */}
-            {symbol && (
-                <Link href={`/mse/${symbol.toLowerCase()}`} style={{ textDecoration: 'none' }}>
-                    <span style={{
-                        display: 'inline-block', marginBottom: 12,
-                        background: 'var(--color-background-info)',
-                        color: 'var(--color-text-info)',
-                        fontSize: 12, padding: '4px 10px',
-                        borderRadius: 'var(--border-radius-md)',
-                        fontWeight: 500
-                    }}>
-                        {symbol} — {company}
-                    </span>
-                </Link>
-            )}
-
-            {/* Title */}
-            <h1 style={{ fontSize: 26, fontWeight: 500, lineHeight: 1.35, marginBottom: 12, color: 'var(--color-text-primary)' }}>
-                {article.title}
-            </h1>
-
-            {/* Meta */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-tertiary)', marginBottom: '1.5rem' }}>
-                <div style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: 'var(--color-background-warning)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 500, color: 'var(--color-text-warning)'
-                }}>BN</div>
-                <span style={{ color: 'var(--color-text-secondary)' }}>Bena Nkhoma</span>
-                <span>·</span>
-                <span>{formatDistanceToNow(new Date(article.created_at), { addSuffix: true })}</span>
-            </div>
-
-            {/* Price snapshot at time of post */}
-            {(article.price_at_post || article.pe_at_post || article.market_cap_at_post) && (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                    gap: 10, marginBottom: '1.5rem'
-                }}>
-                    {article.price_at_post && (
-                        <div style={{ background: 'var(--color-background-secondary)', borderRadius: 'var(--border-radius-md)', padding: '10px 12px' }}>
-                            <p style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>Price at post</p>
-                            <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                                MK {Number(article.price_at_post).toLocaleString()}
-                            </p>
-                        </div>
+            {/* Main article */}
+            <div className="min-w-0">
+                {/* Breadcrumb */}
+                <div className="mb-5 flex items-center gap-2 text-[12px] text-(--color-text-tertiary)">
+                    <Link href="/analysis" className="flex items-center gap-1 text-(--color-text-info) no-underline hover:underline">
+                        <ArrowLeft size={12} aria-hidden="true" />
+                        Analysis
+                    </Link>
+                    {symbol && (
+                        <>
+                            <span>›</span>
+                            <Link href={`/mse/${symbol.toLowerCase()}`} className="text-(--color-text-info) no-underline hover:underline">{symbol}</Link>
+                        </>
                     )}
-                    {article.pe_at_post && (
-                        <div style={{ background: 'var(--color-background-secondary)', borderRadius: 'var(--border-radius-md)', padding: '10px 12px' }}>
-                            <p style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>P/E ratio</p>
-                            <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                                {Number(article.pe_at_post).toFixed(2)}x
-                            </p>
-                        </div>
-                    )}
-                    {article.market_cap_at_post && (
-                        <div style={{ background: 'var(--color-background-secondary)', borderRadius: 'var(--border-radius-md)', padding: '10px 12px' }}>
-                            <p style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>Market cap</p>
-                            <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                                MK {(Number(article.market_cap_at_post) / 1_000_000_000).toFixed(1)}B
-                            </p>
+                </div>
+
+                {/* Symbol badge */}
+                {symbol && (
+                    <Link href={`/mse/${symbol.toLowerCase()}`} className="no-underline">
+                        <span className="mb-4 inline-flex items-center gap-2 rounded-(--border-radius-md) bg-(--color-background-info) px-3 py-1.5 text-[12px] font-bold text-(--color-text-info)">
+                            {symbol} — {company}
+                        </span>
+                    </Link>
+                )}
+
+                {/* Title */}
+                <h1 className="mb-4 text-[28px] font-bold leading-[1.2] text-(--color-text-primary)">
+                    {article.title}
+                </h1>
+
+                {/* Author row */}
+                <div className="mb-6 flex items-center gap-3 border-b-[0.5px] border-(--color-border-tertiary) pb-6">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--color-background-warning) text-[11px] font-bold text-(--color-text-warning)">BN</div>
+                    <div>
+                        <p className="text-[13px] font-semibold text-(--color-text-primary)">Bena Nkhoma</p>
+                        <p className="text-[12px] text-(--color-text-tertiary)">
+                            {formatDistanceToNow(new Date(article.created_at), { addSuffix: true })}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Hero image */}
+                <div className="mb-6 overflow-hidden rounded-(--border-radius-lg) h-[240px] w-full">
+                    {(article as any).image_url ? (
+                        <img src={(article as any).image_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[#0c1f3d]">
+                            <svg viewBox="0 0 200 80" className="w-48 opacity-20" fill="none">
+                                <polyline points="0,70 30,50 60,58 90,30 120,42 150,15 180,25 200,8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <circle cx="200" cy="8" r="4" fill="white" />
+                            </svg>
                         </div>
                     )}
                 </div>
-            )}
 
-            {/* Article body */}
-            <div style={{
-                fontSize: 15,
-                lineHeight: 1.8,
-                color: 'var(--color-text-primary)',
-                borderTop: '0.5px solid var(--color-border-tertiary)',
-                paddingTop: '1.5rem',
-                marginBottom: '2rem'
-            }}>
-                {article.content.split('\n').map((para: string, i: number) =>
-                    para.trim() ? (
-                        <p key={i} style={{ marginBottom: '1rem' }}>{para}</p>
-                    ) : null
+                {/* Stat boxes */}
+                {(article.price_at_post || article.pe_at_post || article.market_cap_at_post) && (
+                    <div className="mb-6 grid grid-cols-3 gap-3">
+                        {article.price_at_post && (
+                            <div className="rounded-(--border-radius-md) bg-(--color-background-secondary) p-3">
+                                <p className="mb-1 text-[11px] text-(--color-text-tertiary)">Price at post</p>
+                                <p className="text-[15px] font-bold text-(--color-text-primary)">MK {Number(article.price_at_post).toLocaleString()}</p>
+                            </div>
+                        )}
+                        {article.pe_at_post && (
+                            <div className="rounded-(--border-radius-md) bg-(--color-background-secondary) p-3">
+                                <p className="mb-1 text-[11px] text-(--color-text-tertiary)">P/E ratio</p>
+                                <p className="text-[15px] font-bold text-(--color-text-primary)">{Number(article.pe_at_post).toFixed(2)}x</p>
+                            </div>
+                        )}
+                        {article.market_cap_at_post && (
+                            <div className="rounded-(--border-radius-md) bg-(--color-background-secondary) p-3">
+                                <p className="mb-1 text-[11px] text-(--color-text-tertiary)">Market cap</p>
+                                <p className="text-[15px] font-bold text-(--color-text-primary)">MK {(Number(article.market_cap_at_post) / 1_000_000_000).toFixed(1)}B</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Article body */}
+                <div
+                    className="mb-10 border-t-[0.5px] border-(--color-border-tertiary) pt-6 bbn-article-body"
+                    dangerouslySetInnerHTML={{ __html: article.content }}
+                />
+
+                {/* Related articles */}
+                {related && related.length > 0 && (
+                    <div className="border-t-[0.5px] border-(--color-border-tertiary) pt-6">
+                        <h3 className="mb-4 text-[16px] font-bold text-(--color-text-primary)">Related analysis</h3>
+                        <div className="grid grid-cols-3 gap-3">
+                            {related.map((r: any) => (
+                                <Link key={r.id} href={`/analysis/${r.id}`} className="no-underline group">
+                                    <div className="overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)]">
+                                        <div className="h-[80px] w-full overflow-hidden">
+                                            {r.image_url ? (
+                                                <img src={r.image_url} alt="" className="h-full w-full object-cover" />
+                                            ) : (
+                                                <div className="flex h-full w-full items-center justify-center bg-[#0c1f3d]">
+                                                    <svg viewBox="0 0 40 20" className="w-10 opacity-20" fill="none">
+                                                        <polyline points="0,18 10,12 20,14 30,5 40,8" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-3">
+                                            {r.mse_counters?.symbol && (
+                                                <span className="mb-1.5 inline-block rounded-full bg-(--color-background-info) px-2 py-0.5 text-[9px] font-bold text-(--color-text-info)">
+                                                    {r.mse_counters.symbol}
+                                                </span>
+                                            )}
+                                            <p className="text-[12px] font-semibold leading-snug text-(--color-text-primary) group-hover:text-(--color-text-info) transition-colors">
+                                                {r.title}
+                                            </p>
+                                            <p className="mt-1 text-[10px] text-(--color-text-tertiary)">
+                                                {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
                 )}
             </div>
 
-            {/* Footer CTA */}
-            <div style={{
-                background: 'var(--color-background-secondary)',
-                borderRadius: 'var(--border-radius-lg)',
-                padding: '1rem 1.25rem',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap'
-            }}>
-                <div>
-                    <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 4, color: 'var(--color-text-primary)' }}>
-                        Want to discuss this analysis?
+            {/* Sidebar */}
+            <div className="hidden lg:block">
+                {/* Live price card */}
+                {symbol && (
+                    <div className="mb-4 rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-[var(--shadow-card)] p-4">
+                        <p className="mb-3 text-[11px] font-bold tracking-widest text-(--color-text-tertiary) uppercase">{symbol} price</p>
+                        {article.price_at_post && (
+                            <p className="text-[26px] font-bold text-(--color-text-primary) mb-1">
+                                MK {Number(article.price_at_post).toLocaleString()}
+                            </p>
+                        )}
+                        <div className="mt-3 flex flex-col gap-0">
+                            {article.pe_at_post && (
+                                <div className="flex justify-between border-b-[0.5px] border-(--color-border-tertiary) py-2">
+                                    <span className="text-[12px] text-(--color-text-tertiary)">P/E ratio</span>
+                                    <span className="text-[12px] font-semibold text-(--color-text-primary)">{Number(article.pe_at_post).toFixed(2)}x</span>
+                                </div>
+                            )}
+                            {article.market_cap_at_post && (
+                                <div className="flex justify-between py-2">
+                                    <span className="text-[12px] text-(--color-text-tertiary)">Market cap</span>
+                                    <span className="text-[12px] font-semibold text-(--color-text-primary)">MK {(Number(article.market_cap_at_post) / 1_000_000_000).toFixed(1)}B</span>
+                                </div>
+                            )}
+                        </div>
+                        <Link href={`/mse/${symbol.toLowerCase()}`} className="mt-3 block rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) py-2 text-center text-[12px] font-semibold text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary)">
+                            View {symbol} on MSE →
+                        </Link>
+                    </div>
+                )}
+
+                {/* Join CTA */}
+                <div className="rounded-(--border-radius-lg) border-[0.5px] border-[rgba(239,159,39,0.25)] bg-(--color-background-warning) p-4">
+                    <p className="mb-1 text-[13px] font-bold text-(--color-text-warning)">
+                        Track {symbol ?? 'this stock'} in your portfolio
                     </p>
-                    <p style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                        Join the community to share your take on {symbol ?? 'this stock'}.
+                    <p className="mb-3 text-[11px] leading-relaxed text-(--color-text-warning) opacity-80">
+                        Create a free account to save counters and get alerts.
                     </p>
+                    <Link href="/signup" className="block rounded-(--border-radius-md) bg-[#ef9f27] py-2 text-center text-[12px] font-bold text-[#412402] no-underline transition-opacity hover:opacity-90">
+                        Join free →
+                    </Link>
                 </div>
-                <Link href="/signup" style={{
-                    background: 'var(--color-background-warning)',
-                    color: 'var(--color-text-warning)',
-                    borderRadius: 'var(--border-radius-md)',
-                    fontSize: 13, padding: '7px 16px',
-                    textDecoration: 'none', fontWeight: 500
-                }}>
-                    Join free
-                </Link>
             </div>
+
         </div>
     )
 }

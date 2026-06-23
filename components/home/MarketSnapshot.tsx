@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { getSymbol, type PriceMover } from '@/types/home'
+import MseIndexChart from './MseIndexChart'
+
+
 
 export function MarketSnapshot({ movers }: { movers: PriceMover[] }) {
   if (movers.length === 0) return null
@@ -38,6 +41,7 @@ export function MarketSnapshot({ movers }: { movers: PriceMover[] }) {
           )
         })}
       </div>
+      <MseIndexChart />
     </div>
   )
 }
