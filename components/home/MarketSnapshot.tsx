@@ -41,7 +41,7 @@ export function MarketSnapshot({ movers }: { movers: PriceMover[] }) {
           )
         })}
       </div>
-      <MseIndexChart />
+      
     </div>
   )
 }

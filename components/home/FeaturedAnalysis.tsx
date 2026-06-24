@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Flame } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { getSymbol, type Analysis } from '@/types/home'
+import { TrendChart } from './TrendChart'
 
 export function FeaturedAnalysis({
     analysis,
@@ -54,6 +55,8 @@ export function FeaturedAnalysis({
                     </>
                 )}
             </div>
+
+            <TrendChart symbol={symbol} />
 
             {related.length > 0 && (
                 <div className="pt-1">
