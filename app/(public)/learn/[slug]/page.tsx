@@ -77,6 +77,7 @@ export default async function ModulePage({
 
                 <ModuleCompletion
                     quiz={currentModule.quiz}
+                    widgetType={currentModule.widget_type}
                     isCompleted={isCompleted}
                     markComplete={markComplete}
                 />

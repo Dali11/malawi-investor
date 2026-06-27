@@ -1,13 +1,8 @@
-import DividendCalculator from "./DivedendCalculator"
-
-
-export const moduleWidgets: Record<string, React.ComponentType> = {
-    dividend_calculator: DividendCalculator,
-}
+import { widgetRegistry } from './widgetRegistry'
 
 export function ModuleWidget({ widgetType }: { widgetType: string | null }) {
     if (!widgetType) return null
-    const Widget = moduleWidgets[widgetType]
-    if (!Widget) return null
-    return <Widget />
+    const widget = widgetRegistry[widgetType]
+    if (!widget || widget.gatesCompletion) return null
+    return <>{widget.render({ onCorrect: () => { } })}</>
 }

@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import { IconArrowUpRight, IconArrowDownRight } from '@tabler/icons-react'
+import { useState, useEffect } from 'react'
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 type Stock = {
     symbol: string
@@ -19,7 +19,6 @@ const initialStocks: Stock[] = [
 export default function TickerDemo({ onFrozen }: { onFrozen?: (stocks: Stock[]) => void }) {
     const [stocks, setStocks] = useState<Stock[]>(initialStocks)
     const [frozen, setFrozen] = useState(false)
-    const calledRef = useRef(false)
 
     useEffect(() => {
         if (frozen) return
@@ -37,31 +36,22 @@ export default function TickerDemo({ onFrozen }: { onFrozen?: (stocks: Stock[]) 
                 })
             )
         }, 2000)
-
-        const freezeTimer = setTimeout(() => {
-            clearInterval(interval)
-            setFrozen(true)
-        }, 8000)
-
-        return () => {
-            clearInterval(interval)
-            clearTimeout(freezeTimer)
-        }
+        return () => clearInterval(interval)
     }, [frozen])
 
-    useEffect(() => {
-        if (frozen && !calledRef.current && onFrozen) {
-            calledRef.current = true
-            onFrozen(stocks)
-        }
-    }, [frozen, stocks, onFrozen])
+    function handlePause() {
+        setFrozen(true)
+        onFrozen?.(stocks)
+    }
+
+    function handleResume() {
+        setFrozen(false)
+    }
 
     return (
         <div className="bg-gray-50 rounded-xl p-5 my-6">
-            <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-gray-500">Watch the ticker move</p>
-                {frozen && <p className="text-xs text-amber-600 font-medium">Frozen — check the question below</p>}
-            </div>
+            <p className="text-xs text-gray-500 mb-3">Watch the ticker move</p>
+
             <table className="w-full text-sm">
                 <thead>
                     <tr className="text-xs text-gray-400 text-left">
@@ -83,8 +73,8 @@ export default function TickerDemo({ onFrozen }: { onFrozen?: (stocks: Stock[]) 
                                     className={`py-2 text-right ${isUp ? 'text-green-600' : isDown ? 'text-red-600' : 'text-gray-500'
                                         }`}
                                 >
-                                    {isUp && <IconArrowUpRight size={14} className="inline mr-0.5" />}
-                                    {isDown && <IconArrowDownRight size={14} className="inline mr-0.5" />}
+                                    {isUp && <ArrowUpRight size={14} className="inline mr-0.5" />}
+                                    {isDown && <ArrowDownRight size={14} className="inline mr-0.5" />}
                                     {s.change.toFixed(2)}%
                                 </td>
                                 <td className="py-2 text-right text-gray-500">{s.volume.toLocaleString()}</td>
@@ -93,6 +83,18 @@ export default function TickerDemo({ onFrozen }: { onFrozen?: (stocks: Stock[]) 
                     })}
                 </tbody>
             </table>
+
+            <div className="border-t border-gray-200 mt-4 pt-4 flex items-center justify-between">
+                <p className="text-xs text-gray-500">
+                    {frozen ? 'Ticker paused' : 'Pause the ticker to answer the questions below'}
+                </p>
+                <button
+                    onClick={frozen ? handleResume : handlePause}
+                    className="text-xs font-medium text-amber-600 hover:text-amber-700 border border-amber-200 rounded-full px-3 py-1 flex-shrink-0"
+                >
+                    {frozen ? 'Resume' : 'Pause'}
+                </button>
+            </div>
         </div>
     )
 }
