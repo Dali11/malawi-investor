@@ -138,7 +138,7 @@ export default function SimulatorClient({
             </div>
 
             <div className="flex gap-2 mb-4">
-                {(['portfolio', 'invest', 'history'] as const).map(t => (
+                {(['portfolio', 'trade', 'history'] as const).map(t => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
