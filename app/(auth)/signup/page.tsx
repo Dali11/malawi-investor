@@ -36,14 +36,14 @@ export default function SignupPage() {
             password,
             options: {
                 data: { full_name: fullName },
-                emailRedirectTo: `${window.location.origin}/auth/callback${searchParams.get('redirect')
+                emailRedirectTo: `${window.location.origin}/callback${searchParams.get('redirect')
                         ? `?redirect=${searchParams.get('redirect')}`
                         : ''
                     }`,
             }
         })
         if (error) {
-            setError(error.message)
+            setError(error.message || 'Something went wrong. Please try again.')
             setLoading(false)
         } else if (data.session) {
             const redirectTo = searchParams.get('redirect') || '/analysis'
