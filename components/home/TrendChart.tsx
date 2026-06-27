@@ -163,18 +163,15 @@ export function TrendChart({ symbol }: { symbol?: string | null }) {
                                 axisLine={false}
                                 tickLine={false}
                             />
-                            <Tooltip
-                                formatter={(value: number) =>
-                                    isComposite ? `${value.toFixed(2)}%` : value.toLocaleString('en', { minimumFractionDigits: 2 })
-                                }
-                                labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                                contentStyle={{
-                                    background: 'var(--color-background-primary)',
-                                    border: '0.5px solid var(--color-border-tertiary)',
-                                    borderRadius: 'var(--border-radius-md)',
-                                    fontSize: 12,
-                                }}
-                            />
+                                            <Tooltip
+                                                formatter={(value: number | undefined) =>
+                                                    value === undefined
+                                                        ? '—'
+                                                        : isComposite
+                                                            ? `${value.toFixed(2)}%`
+                                                            : value.toLocaleString('en', { minimumFractionDigits: 2 })
+                                                }
+                                                />
                             <Area
                                 type="linear"
                                 dataKey="value"
