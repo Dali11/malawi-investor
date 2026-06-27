@@ -1,10 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function SignupPage() {
+function SignupForm() {
     const [fullName, setFullName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -37,8 +37,8 @@ export default function SignupPage() {
             options: {
                 data: { full_name: fullName },
                 emailRedirectTo: `${window.location.origin}/callback${searchParams.get('redirect')
-                        ? `?redirect=${searchParams.get('redirect')}`
-                        : ''
+                    ? `?redirect=${searchParams.get('redirect')}`
+                    : ''
                     }`,
             }
         })
@@ -68,6 +68,7 @@ export default function SignupPage() {
             </div>
         )
     }
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
             <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl p-8">
@@ -146,5 +147,13 @@ export default function SignupPage() {
                 </p>
             </div>
         </div>
+    )
+}
+
+export default function SignupPage() {
+    return (
+        <Suspense fallback={null}>
+            <SignupForm />
+        </Suspense>
     )
 }
