@@ -115,6 +115,25 @@ function SignupForm() {
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-400"
                             placeholder="At least 8 characters"
                         />
+                        {/* Password strength indicator */}
+                        {password.length > 0 && (() => {
+                            const strength =
+                                password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) ? 3
+                                    : password.length >= 8 ? 2
+                                        : 1
+                            const labels = ['', 'Weak', 'Good', 'Strong']
+                            const colors = ['', 'bg-red-400', 'bg-amber-400', 'bg-green-500']
+                            return (
+                                <div className="mt-1.5">
+                                    <div className="flex gap-1 mb-1">
+                                        {[1, 2, 3].map(i => (
+                                            <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength ? colors[strength] : 'bg-gray-200'}`} />
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-400">{labels[strength]} password</p>
+                                </div>
+                            )
+                        })()}
                     </div>
                     <div>
                         <label className="text-sm text-gray-600 block mb-1">Confirm password</label>

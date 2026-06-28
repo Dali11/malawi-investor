@@ -68,7 +68,7 @@ export default async function PublicLayout({
                                 )}
                                 {user && (
                                     <Link
-                                        href="/signup"
+                                        href="/account"
                                         className="rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) px-4 py-1.5 text-xs font-medium text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary)"
                                     >
                                         My account
