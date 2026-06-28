@@ -5,6 +5,7 @@ import { Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import MobileNav from '@/components/home/MobileNav'
 import SearchBox from '@/components/home/SearchBox'
+import AccountButton from '../account/AccountButton'
 
 export default async function PublicLayout({
     children,
@@ -66,16 +67,10 @@ export default async function PublicLayout({
                                         Sign in
                                     </Link>
                                 )}
-                                {user && (
-                                    <Link
-                                        href="/account"
-                                        className="rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) px-4 py-1.5 text-xs font-medium text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary)"
-                                    >
-                                        My account
-                                    </Link>
-                                )}
+                                
                                 <MobileNav navLinks={navLinks} user={!!user} />
                                 <SearchBox />
+                                {user && <AccountButton name={user.user_metadata?.full_name ?? user.email ?? ''} />}
                             </div>
                         </div>
 
