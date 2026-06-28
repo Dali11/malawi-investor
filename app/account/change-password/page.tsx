@@ -68,7 +68,7 @@ export default function ChangePasswordPage() {
                     href="/account"
                     className="mb-6 inline-flex items-center gap-1.5 text-[13px] text-(--color-text-info) no-underline hover:underline"
                 >
-                    <ArrowLeft size={13} /> Back to account
+                    <ArrowLeft size={15} /> Back to account
                 </Link>
 
                 <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-(--shadow-card) overflow-hidden">
@@ -194,7 +194,7 @@ export default function ChangePasswordPage() {
                         <button
                             onClick={handleChange}
                             disabled={loading || success || strength === 0}
-                            className="w-full rounded-(--border-radius-md) bg-[#ef9f27] py-2.5 text-[14px] font-bold text-[#412402] transition-opacity hover:opacity-90 disabled:opacity-50"
+                            className="w-full mt-2 rounded-(--border-radius-md) bg-[#ef9f27] py-2.5 text-[14px] font-bold text-[#412402] transition-opacity hover:opacity-90 disabled:opacity-50"
                         >
                             {loading ? 'Verifying & updating…' : 'Update password'}
                         </button>
