@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import MobileNav from '@/components/home/MobileNav'
+import SearchBox from '@/components/home/SearchBox'
 
 export default async function PublicLayout({
     children,
@@ -74,18 +75,7 @@ export default async function PublicLayout({
                                     </Link>
                                 )}
                                 <MobileNav navLinks={navLinks} user={!!user} />
-                                <div className="relative hidden sm:block">
-                                    <Search
-                                        className="absolute top-1/2 left-2.5 -translate-y-1/2 text-(--color-text-tertiary)"
-                                        size={14}
-                                        aria-hidden="true"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Symbols, courses, glossary…"
-                                        className="h-8 w-[200px] rounded-(--border-radius-md) pl-8 text-xs"
-                                    />
-                                </div>
+                                <SearchBox />
                             </div>
                         </div>
 
