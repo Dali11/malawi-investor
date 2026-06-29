@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import MobileNav from '@/components/home/MobileNav'
+import MarketsDropdown from '@/components/home/MarketsDropdown'
 import SearchBox from '@/components/home/SearchBox'
 import AccountButton from '../account/AccountButton'
 
@@ -51,7 +52,8 @@ export default async function PublicLayout({
                                     <span className="text-(--color-text-warning)">Malawi</span> Investor
                                 </Link>
                                 <nav className="hidden items-center gap-6 text-[16px] text-(--color-text-secondary) md:flex">
-                                    {navLinks.map(({ label, href }) => (
+                                    <MarketsDropdown />
+                                    {navLinks.filter(({ label }) => label !== 'Markets').map(({ label, href }) => (
                                         <Link key={href} href={href} className="no-underline transition-colors hover:text-black hover:underline hover:decoration-yellow-500">
                                             {label}
                                         </Link>
@@ -59,7 +61,7 @@ export default async function PublicLayout({
                                 </nav>
                             </div>
 
-                           
+
                             <div className="flex items-center gap-2">
                                 {!user && (
                                     <Link
@@ -74,7 +76,7 @@ export default async function PublicLayout({
                                 </div>
                                 <MobileNav navLinks={navLinks} user={!!user} />
                                 <SearchBox />
-                                
+
                             </div>
                         </div>
 
@@ -120,7 +122,7 @@ export default async function PublicLayout({
                         </div>
                     </header>
 
-                    
+
                     <main className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-6 py-6 bg-white">
                         {children}
                     </main>

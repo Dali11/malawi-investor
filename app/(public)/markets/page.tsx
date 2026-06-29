@@ -1,9 +1,12 @@
-import React from 'react'
+import { LayoutDashboard } from 'lucide-react'
+import ComingSoon from '@/components/home/ComingSoon'
 
-const Markets = () => {
-  return (
-    <div>Markets Comming soon...</div>
-  )
+export default function MarketOverviewPage() {
+    return (
+        <ComingSoon
+            icon={LayoutDashboard}
+            title="Market Overview"
+            description="A single snapshot of how the MSE is doing today — top movers, volume and sector performance."
+        />
+    )
 }
-
-export default Markets

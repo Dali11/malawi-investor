@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, Search } from 'lucide-react'
+import { Menu, X, Search, ChevronDown } from 'lucide-react'
+import { marketsLinks } from '@/lib/marketsNav'
 
 type NavLink = { label: string; href: string }
 
@@ -13,6 +14,7 @@ export default function MobileNav({
     user: boolean
 }) {
     const [open, setOpen] = useState(false)
+    const [marketsOpen, setMarketsOpen] = useState(false)
 
     return (
         <>
@@ -60,16 +62,52 @@ export default function MobileNav({
                         </div>
 
                         <nav className="flex flex-col gap-1 px-3 py-4">
-                            {navLinks.map(({ label, href }) => (
-                                <Link
-                                    key={href}
-                                    href={href}
-                                    onClick={() => setOpen(false)}
-                                    className="rounded-(--border-radius-md) px-3 py-2.5 text-[15px] text-(--color-text-primary) no-underline hover:bg-(--color-background-secondary)"
-                                >
-                                    {label}
-                                </Link>
-                            ))}
+                            {navLinks.map(({ label, href }) => {
+                                if (label === 'Markets') {
+                                    return (
+                                        <div key={href}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setMarketsOpen((v) => !v)}
+                                                aria-expanded={marketsOpen}
+                                                className="flex w-full items-center justify-between rounded-(--border-radius-md) px-3 py-2.5 text-[15px] text-(--color-text-primary) hover:bg-(--color-background-secondary)"
+                                            >
+                                                Markets
+                                                <ChevronDown
+                                                    size={16}
+                                                    aria-hidden="true"
+                                                    className="transition-transform"
+                                                    style={{ transform: marketsOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                                                />
+                                            </button>
+                                            {marketsOpen && (
+                                                <div className="flex flex-col gap-0.5 pl-3">
+                                                    {marketsLinks.map((m) => (
+                                                        <Link
+                                                            key={m.href}
+                                                            href={m.href}
+                                                            onClick={() => setOpen(false)}
+                                                            className="rounded-(--border-radius-md) px-3 py-2 text-[14px] text-(--color-text-secondary) no-underline hover:bg-(--color-background-secondary) hover:text-(--color-text-primary)"
+                                                        >
+                                                            {m.label}
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                }
+                                return (
+                                    <Link
+                                        key={href}
+                                        href={href}
+                                        onClick={() => setOpen(false)}
+                                        className="rounded-(--border-radius-md) px-3 py-2.5 text-[15px] text-(--color-text-primary) no-underline hover:bg-(--color-background-secondary)"
+                                    >
+                                        {label}
+                                    </Link>
+                                )
+                            })}
                         </nav>
 
                         {!user && (
