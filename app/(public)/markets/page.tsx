@@ -17,9 +17,9 @@ import { MarketMovers } from '@/components/home/MarketMovers'
 
 import { TrendChart } from '@/components/home/TrendChart'
 import { getSymbol, type PriceMover } from '@/types/home'
-import { MarketStatCard } from '@/components/home/MarketStatCard'
-import { RecentCorporateActions } from '@/components/home/RecentCorporateActions'
-import { MostActiveCounters } from '@/components/home/MostActiveCounters'
+import { MarketStatCard } from '@/components/markets/MarketStatCard'
+import { RecentCorporateActions } from '@/components/markets/RecentCorporateActions'
+import { MostActiveCounters } from '@/components/markets/MostActiveCounters'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
