@@ -23,7 +23,7 @@ export default function SidebarClient({ profile }: any) {
 
             <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
                 {[
-                    { href: '/analysis', label: 'Daily Analysis', icon: '📊' },
+                    { href: '/news', label: 'Daily News', icon: '📊' },
                     { href: '/learn', label: 'Learn', icon: '📚' },
                     { href: '/simulator', label: 'Inv. Simulator', icon: '📈' },
                     { href: '/mentorship', label: 'Mentorship', icon: '🎯' },

@@ -136,7 +136,7 @@ export default function SearchBox() {
                                     {results.articles.map((a: any) => (
                                         <Link
                                             key={a.id}
-                                            href={`/analysis/${a.id}`}
+                                            href={`/news/${a.id}`}
                                             onClick={() => setOpen(false)}
                                             className="flex items-center gap-3 px-4 py-2.5 no-underline hover:bg-(--color-background-secondary) border-b-[0.5px] border-(--color-border-tertiary) last:border-0"
                                         >

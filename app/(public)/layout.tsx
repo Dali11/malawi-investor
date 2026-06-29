@@ -31,11 +31,13 @@ export default async function PublicLayout({
     })
 
     const navLinks = [
-        { label: 'Analysis', href: '/analysis' },
+        { label: 'Markets', href: '/markets' },
+        { label: 'News', href: '/news' },
+        { label: 'Research', href: '/research' },
         { label: 'Learn', href: '/learn' },
-        { label: 'Glossary', href: '/glossary' },
         { label: 'Community', href: '/community' },
         { label: 'MSE', href: '/mse' },
+        { label: 'Watchlist', href: '/watchlist' },
     ]
 
     return (

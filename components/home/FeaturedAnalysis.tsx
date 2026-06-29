@@ -16,7 +16,7 @@ export function FeaturedAnalysis({
     return (
         <article className="space-y-3">
             {analysis.image_url && (
-                <Link href={`/analysis/${analysis.id}`} className="block">
+                <Link href={`/news/${analysis.id}`} className="block">
                     <div className="overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-secondary)">
                         <img
                             src={analysis.image_url}
@@ -32,7 +32,7 @@ export function FeaturedAnalysis({
                 Featured
             </div>
 
-            <Link href={`/analysis/${analysis.id}`} className="group block no-underline">
+            <Link href={`/news/${analysis.id}`} className="group block no-underline">
                 <h1 className="text-2xl leading-tight font-bold text-(--color-text-primary) transition-colors group-hover:text-(--color-text-info) sm:text-3xl">
                     {analysis.title}
                 </h1>
@@ -72,7 +72,7 @@ export function FeaturedAnalysis({
                         {related.map((a) => (
                             <li key={a.id}>
                                 <Link
-                                    href={`/analysis/${a.id}`}
+                                    href={`/news/${a.id}`}
                                     className="block text-sm font-medium text-(--color-text-primary) no-underline transition-colors hover:text-(--color-text-info)"
                                 >
                                     {a.title}

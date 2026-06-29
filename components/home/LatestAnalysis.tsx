@@ -9,9 +9,9 @@ export function LatestAnalysis({ items }: { items: Analysis[] }) {
     return (
         <section>
             <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-(--color-text-primary)">Latest analysis</h3>
+                <h3 className="text-lg font-bold text-(--color-text-primary)">Latest news</h3>
                 <Link
-                    href="/analysis"
+                    href="/news"
                     className="flex items-center gap-1 text-sm font-medium text-(--color-text-tertiary) no-underline transition-colors hover:text-(--color-text-primary)"
                 >
                     See all <ArrowRight size={16} aria-hidden="true" />
@@ -21,7 +21,7 @@ export function LatestAnalysis({ items }: { items: Analysis[] }) {
                 {items.map((a) => {
                     const symbol = getSymbol(a.mse_counters)
                     return (
-                        <Link key={a.id} href={`/analysis/${a.id}`} className="group no-underline">
+                        <Link key={a.id} href={`/news/${a.id}`} className="group no-underline">
                             <div className="h-full overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-(--shadow-card) transition-all hover:-translate-y-1 hover:shadow-(--shadow-card-hover)">
                                 {a.image_url && (
                                     <img src={a.image_url} alt={a.title} className="h-28 w-full object-cover" />

@@ -202,14 +202,14 @@ export default async function AccountPage() {
             <section className="mb-8">
                 <div className="mb-3 flex items-center gap-2">
                     <Clock size={15} className="text-(--color-text-warning)" />
-                    <h2 className="text-[15px] font-bold text-(--color-text-primary)">Recent analysis</h2>
+                    <h2 className="text-[15px] font-bold text-(--color-text-primary)">Recent news</h2>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {(recentArticles ?? []).map((a: any) => (
                         <Link
                             key={a.id}
-                            href={`/analysis/${a.id}`}
+                            href={`/news/${a.id}`}
                             className="group flex items-center gap-3 rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) p-3 no-underline shadow-(--shadow-card) transition-shadow hover:shadow-(--shadow-card-hover)"
                         >
                             <div className="h-12 w-16 shrink-0 overflow-hidden rounded bg-[#0c1f3d]">

@@ -67,12 +67,12 @@ export async function generateMetadata({
         },
 
         alternates: {
-            canonical: `/analysis/${id}`,
+            canonical: `/news/${id}`,
         },
     }
 }
 
-// ── Page component (unchanged below) ──────────────────────────
+
 export default async function AnalysisArticlePage({
     params,
 }: {
@@ -108,9 +108,9 @@ export default async function AnalysisArticlePage({
             <div className="min-w-0">
                 {/* Breadcrumb */}
                 <div className="mb-5 flex items-center gap-2 text-[12px] text-(--color-text-tertiary)">
-                    <Link href="/analysis" className="flex items-center gap-1 text-(--color-text-info) no-underline hover:underline">
+                    <Link href="/news" className="flex items-center gap-1 text-(--color-text-info) no-underline hover:underline">
                         <ArrowLeft size={12} aria-hidden="true" />
-                        Analysis
+                        News
                     </Link>
                     {symbol && (
                         <>
@@ -192,10 +192,10 @@ export default async function AnalysisArticlePage({
                 {/* Related articles */}
                 {related && related.length > 0 && (
                     <div className="border-t-[0.5px] border-(--color-border-tertiary) pt-6">
-                        <h3 className="mb-4 text-[16px] font-bold text-(--color-text-primary)">Related analysis</h3>
+                        <h3 className="mb-4 text-[16px] font-bold text-(--color-text-primary)">Related news</h3>
                         <div className="grid grid-cols-3 gap-3">
                             {related.map((r: any) => (
-                                <Link key={r.id} href={`/analysis/${r.id}`} className="no-underline group">
+                                <Link key={r.id} href={`/news/${r.id}`} className="no-underline group">
                                     <div className="overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)]">
                                         <div className="h-[80px] w-full overflow-hidden">
                                             {r.image_url ? (

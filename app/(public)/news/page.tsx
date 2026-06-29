@@ -83,7 +83,7 @@ export default async function AnalysisPage({
                     {['All', 'Banking', 'Insurance', 'Telecoms', 'Agriculture', 'Energy'].map((f) => (
                         <Link
                             key={f}
-                            href={f === 'All' ? '/analysis' : `/analysis?sector=${f}`}
+                            href={f === 'All' ? '/news' : `/news?sector=${f}`}
                             className={`rounded-full border-[0.5px] px-3 py-1 text-[12px] font-medium transition-colors no-underline ${(f === 'All' && !sector) || sector === f
                                     ? 'border-transparent bg-(--color-text-primary) text-(--color-background-primary)'
                                     : 'border-(--color-border-tertiary) bg-(--color-background-primary) text-(--color-text-secondary) hover:border-(--color-border-secondary)'
@@ -96,7 +96,7 @@ export default async function AnalysisPage({
 
                 {/* Hero / featured */}
                 {featured && (
-                    <Link href={`/analysis/${featured.id}`} className="no-underline group mb-6 block">
+                    <Link href={`/news/${featured.id}`} className="no-underline group mb-6 block">
                         <div className="overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)]">
                             <div className="h-[220px] w-full overflow-hidden">
                                 {(featured as any).image_url ? (
@@ -148,7 +148,7 @@ export default async function AnalysisPage({
                 {/* Article grid */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {rest.map((a: any) => (
-                        <Link key={a.id} href={`/analysis/${a.id}`} className="no-underline group">
+                        <Link key={a.id} href={`/news/${a.id}`} className="no-underline group">
                             <div className="h-full overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)]">
                                 <div className="h-[120px] w-full overflow-hidden">
                                     {a.image_url ? (
@@ -235,7 +235,7 @@ export default async function AnalysisPage({
                     <p className="mb-3 text-[11px] font-bold tracking-widest text-(--color-text-tertiary) uppercase">Browse by counter</p>
                     <div className="flex flex-wrap gap-2">
                         {['NBM', 'FDH', 'STANDARD', 'NICO', 'TNM', 'AIRTEL', 'ILLOVO', 'PCL', 'BHL', 'FMBCH'].map((s) => (
-                            <Link key={s} href={`/analysis?symbol=${s}`} className="no-underline rounded-full bg-(--color-background-secondary) px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-background-info) hover:text-(--color-text-info)">
+                            <Link key={s} href={`/news?symbol=${s}`} className="no-underline rounded-full bg-(--color-background-secondary) px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-background-info) hover:text-(--color-text-info)">
                                 {s}
                             </Link>
                         ))}
