@@ -1,25 +1,20 @@
 import Link from 'next/link'
 import { Flame } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { getSymbol, type Analysis } from '@/types/home'
-import { IndexCard } from '@/components/markets/IndexCard'
+import { getSymbol, type Analysis, type PriceMover } from '@/types/home'
+import { MarketSnapshot } from './MarketSnapshot'
+
 
 export function FeaturedAnalysis({
     analysis,
     secondStory,
     related = [],
-    masi,
+    movers = [],
 }: {
     analysis: Analysis
     secondStory?: Analysis
     related?: Analysis[]
-    masi?: {
-        value: number | null
-        dayChange: number | null
-        weekChange: number | null
-        ytdChange: number | null
-        asOf: string | null
-    }
+    movers?: PriceMover[]
 }) {
     const symbol = getSymbol(analysis.mse_counters)
     const secondSymbol = secondStory ? getSymbol(secondStory.mse_counters) : null
@@ -106,17 +101,9 @@ export function FeaturedAnalysis({
                     </div>
                 )}
 
-                {masi && (
+                {movers.length > 0 && (
                     <div className="pt-2 lg:hidden">
-                        <IndexCard
-                            code="MASI"
-                            name="Malawi All Share Index"
-                            value={masi.value}
-                            dayChange={masi.dayChange}
-                            weekChange={masi.weekChange}
-                            ytdChange={masi.ytdChange}
-                            asOf={masi.asOf}
-                        />
+                        <MarketSnapshot movers={movers} />
                     </div>
                 )}
 
@@ -141,17 +128,9 @@ export function FeaturedAnalysis({
                 )}
             </article>
 
-            {masi && (
+            {movers.length > 0 && (
                 <div className="hidden lg:block">
-                    <IndexCard
-                        code="MASI"
-                        name="Malawi All Share Index"
-                        value={masi.value}
-                        dayChange={masi.dayChange}
-                        weekChange={masi.weekChange}
-                        ytdChange={masi.ytdChange}
-                        asOf={masi.asOf}
-                    />
+                    <MarketSnapshot movers={movers} />
                 </div>
             )}
         </div>
