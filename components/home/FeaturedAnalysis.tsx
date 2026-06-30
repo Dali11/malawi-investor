@@ -45,7 +45,7 @@ export function FeaturedAnalysis({
                     .replace(/&amp;/g, '&')
                     .replace(/\s+/g, ' ')
                     .trim()
-                    .slice(0, 350)}…
+                    .slice(0, 100)}…
             </p>
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-(--color-text-tertiary)">
