@@ -11,6 +11,8 @@ import ReactMarkdown from 'react-markdown'
 import IncomeStatementExplorer from '@/components/modules/IncomeStatementExplorer'
 import CompanyComparison from '@/components/modules/CompanyComparison'
 import RedFlags from '@/components/modules/RedFlags'
+import PortfolioSimulator from '@/components/modules/PortfolioSimulator'
+import DiversificationGuide from '@/components/modules/DiversificationGuide'
 
 export default async function ModulePage({
     params,
@@ -75,8 +77,24 @@ export default async function ModulePage({
                 <h1 className="text-2xl font-medium text-gray-900 mb-2">{currentModule.title}</h1>
                 <p className="text-gray-500 mb-8">{currentModule.description}</p>
 
-                
-                {currentModule.widget_type === 'financial_statement_explorer' ? (
+                {currentModule.widget_type === 'portfolio_simulator' ? (
+                    <ModuleTabs
+                        labels={[
+                            '1. The idea',
+                            '2. Try it',
+                            '3. How much is enough',
+                        ]}
+                        tab1={
+                            <div className="border border-gray-200 rounded-xl p-6 bbn-article-body">
+                                <ReactMarkdown>
+                                    {currentModule.content || 'Lesson content coming soon.'}
+                                </ReactMarkdown>
+                            </div>
+                        }
+                        tab2={<PortfolioSimulator />}
+                        tab3={<DiversificationGuide />}
+                    />
+                ) : currentModule.widget_type === 'financial_statement_explorer' ? (
                     <ModuleTabs
                         labels={[
                             '1. Read a statement',
@@ -123,7 +141,7 @@ export default async function ModulePage({
 
                         <ModuleWidget widgetType={currentModule.widget_type} />
                     </>
-                )}  
+                )}
                 <ModuleCompletion
                     quiz={currentModule.quiz}
                     widgetType={currentModule.widget_type}
