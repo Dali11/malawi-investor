@@ -64,6 +64,22 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
     const isUp = points.length >= 2 && points[points.length - 1].value >= points[0].value
     const lineColor = isUp ? 'var(--color-text-success)' : 'var(--color-text-danger)'
 
+    // If consecutive points are weeks/months apart (e.g. backfilled
+    // index snapshots recovered from sparse Wayback Machine crawls),
+    // a solid interpolated line falsely implies continuous daily
+    // data. Detect large gaps and switch to a dashed line with
+    // visible dot markers plus an explicit disclaimer instead.
+    function maxGapDays(pts: ChartPoint[]): number {
+        if (pts.length < 2) return 0
+        let max = 0
+        for (let i = 1; i < pts.length; i++) {
+            const diff = (new Date(pts[i].date).getTime() - new Date(pts[i - 1].date).getTime()) / 86_400_000
+            if (diff > max) max = diff
+        }
+        return max
+    }
+    const isSparseSeries = points.length >= 2 && maxGapDays(points) > 45
+
     // Compute a sensible y-axis domain rather than letting Recharts
     // auto-stretch tiny fluctuations to fill the chart height. For the
     // composite (a % change series that's often very close to 0), the
@@ -96,7 +112,7 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
     const yTickFormatter = (value: number) =>
         isComposite ? `${value.toFixed(1)}%` : value.toLocaleString('en', { maximumFractionDigits: 0 })
 
-    const sparse = (range === '1D' || range === '5D') && points.length < 2
+    const tooFewPoints = points.length < 2
 
     return (
         <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-secondary) p-3">
@@ -133,10 +149,14 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
                     <div className="flex h-full items-center justify-center text-xs text-(--color-text-tertiary)">
                         No history available for this range yet.
                     </div>
-                ) : sparse ? (
+                ) : tooFewPoints ? (
                     <div className="flex h-full flex-col items-center justify-center gap-1 text-center text-xs text-(--color-text-tertiary)">
-                        <span>Only end-of-day prices are tracked — not enough points to chart {range}.</span>
-                        <span>Try 1M or a longer range.</span>
+                        <span>
+                            {(range === '1D' || range === '5D')
+                                ? `Only end-of-day prices are tracked — not enough points to chart ${range}.`
+                                : 'Only 1 data point falls in this range — not enough to draw a trend.'}
+                        </span>
+                        <span>Try a different range.</span>
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -181,8 +201,9 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
                                 dataKey="value"
                                 stroke={lineColor}
                                 strokeWidth={1.75}
-                                fill={`url(#${gradientId})`}
-                                dot={false}
+                                strokeDasharray={isSparseSeries ? '5 4' : undefined}
+                                fill={isSparseSeries ? 'none' : `url(#${gradientId})`}
+                                dot={isSparseSeries ? { r: 3, fill: lineColor, strokeWidth: 0 } : false}
                             />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -192,6 +213,11 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
             {isComposite && (
                 <p className="mt-2 text-[10px] text-(--color-text-tertiary)">
                     Equal-weighted average across tracked counters — not the official MASI.
+                </p>
+            )}
+            {isSparseSeries && (
+                <p className="mt-2 text-[10px] text-(--color-text-tertiary)">
+                    Dashed line connects {points.length} known data points, weeks or months apart — not daily data.
                 </p>
             )}
         </div>
