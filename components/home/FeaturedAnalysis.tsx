@@ -36,17 +36,19 @@ export function FeaturedAnalysis({
                 <h1 className="text-2xl leading-tight font-bold text-(--color-text-primary) transition-colors group-hover:text-(--color-text-info) sm:text-3xl">
                     {analysis.title}
                 </h1>
+
+                <p className="text-base leading-relaxed text-(--color-text-secondary)">
+                    {analysis.content
+                        .replace(/<[^>]*>/g, ' ')
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/&amp;/g, '&')
+                        .replace(/\s+/g, ' ')
+                        .trim()
+                        .slice(0, 100)}…
+                </p>
             </Link>
 
-            <p className="text-base leading-relaxed text-(--color-text-secondary)">
-                {analysis.content
-                    .replace(/<[^>]*>/g, ' ')
-                    .replace(/&nbsp;/g, ' ')
-                    .replace(/&amp;/g, '&')
-                    .replace(/\s+/g, ' ')
-                    .trim()
-                    .slice(0, 100)}…
-            </p>
+            
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-(--color-text-tertiary)">
                 <span className="font-medium text-(--color-text-secondary)">Bena Nkhoma</span>
