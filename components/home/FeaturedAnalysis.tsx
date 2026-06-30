@@ -21,7 +21,7 @@ export function FeaturedAnalysis({
                         <img
                             src={analysis.image_url}
                             alt={analysis.title}
-                            className="h-auto max-h-[220px] w-full object-cover"
+                            className="h-auto max-h-[280px] w-full object-cover"
                         />
                     </div>
                 </Link>
@@ -51,7 +51,7 @@ export function FeaturedAnalysis({
             
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-(--color-text-tertiary)">
-                <span className="font-medium text-(--color-text-secondary)">Bena Nkhoma</span>
+                <span className="font-medium text-(--color-text-secondary)">Dali Kamphani</span>
                 <span aria-hidden="true">·</span>
                 <span>{formatDistanceToNow(new Date(analysis.created_at), { addSuffix: true })}</span>
                 {symbol && (
