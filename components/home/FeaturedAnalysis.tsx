@@ -21,7 +21,7 @@ export function FeaturedAnalysis({
                         <img
                             src={analysis.image_url}
                             alt={analysis.title}
-                            className="h-auto max-h-[280px] w-full object-cover"
+                            className="h-auto max-h-[220px] w-full object-cover"
                         />
                     </div>
                 </Link>
