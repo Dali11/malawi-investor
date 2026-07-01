@@ -106,10 +106,14 @@ export function CorporateActionsList({ actions }: { actions: CorporateActionRow[
                                             {a.headline}
                                         </Link>
                                     ) : (
-                                        <p className="text-[13px] text-(--color-text-primary) leading-snug">{a.headline}</p>
+                                            <Link href={`/markets/corporate-actions/${a.slug}`}>
+                                                <p className="text-[13px] text-(--color-text-primary) leading-snug">{a.headline}</p>
+                                            </Link>
                                     )}
                                     {a.details && (
-                                        <p className="mt-0.5 text-[12px] text-(--color-text-secondary) leading-snug">{a.details}</p>
+                                        <Link href={`/markets/corporate-actions/${a.slug}`}>
+                                            <p className="mt-0.5 line-clamp-1 text-[12px] text-(--color-text-secondary) leading-snug">{a.details}</p>
+                                        </Link>
                                     )}
                                     <p className="mt-1 text-[11px] text-(--color-text-tertiary)">
                                         {a.symbol ? (
