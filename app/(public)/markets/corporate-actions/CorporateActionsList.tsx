@@ -112,7 +112,7 @@ export function CorporateActionsList({ actions }: { actions: CorporateActionRow[
                                     )}
                                     {a.details && (
                                         <Link href={`/markets/corporate-actions/${a.slug}`}>
-                                            <p className="mt-0.5 line-clamp-1 text-[12px] text-(--color-text-secondary) leading-snug">{a.details}</p>
+                                            <p className="mt-0.5 line-clamp-2 sm:line-clamp-1 text-[12px] text-(--color-text-secondary) leading-snug">{a.details}</p>
                                         </Link>
                                     )}
                                     <p className="mt-1 text-[11px] text-(--color-text-tertiary)">
