@@ -8,14 +8,18 @@
 #   1. Extracts text and fills in `details`:
 #      - Dividend rows: tries to pull amount-per-share + ex-date + payment
 #        date via regex, and prepends that as a structured summary line.
-#      - Everything else: stores a cleaned excerpt of the PDF's text
-#        (first ~800 chars of real content, skipping boilerplate headers).
+#      - Everything else: stores the PDF's text, reformatted into clean
+#        paragraphs (see format_paragraphs) — the FULL text, not an
+#        excerpt. Many rows have no PDF worth downloading (Announcement-
+#        type rows especially), so `details` needs to stand on its own
+#        without a "read the rest in the PDF" fallback.
 #      - If the PDF has no text layer (confirmed to happen regularly —
 #        several NICO filings are scanned images), falls back to OCR via
-#        pytesseract. OCR results are prefixed "[OCR — verify against
-#        PDF]" since OCR can misread digits, which matters a lot for the
-#        dividend-amount regex above — treat OCR'd numbers as provisional
-#        until spot-checked, the same way we caught the FDHB amount bug.
+#        pytesseract. Rows extracted via OCR are flagged internally via
+#        the `is_ocr` column (NOT written into the `details` text itself
+#        — that field is user-facing and shouldn't expose scraping/OCR
+#        internals). Use `is_ocr` to spot-check dividend amounts, the
+#        same way we caught the FDHB amount bug.
 #   2. Uploads the PDF itself to the `corporate-action-pdfs` Supabase
 #      Storage bucket and sets `pdf_storage_path`, so /markets/corporate-
 #      actions/[slug] can offer a "Download PDF" link hosted on your own
@@ -34,6 +38,10 @@
 # AND a Storage bucket named "corporate-action-pdfs" created (set to
 # Public) in the Supabase dashboard — see that migration file's comments.
 #
+# Also requires an `is_ocr` column (boolean, default false) on
+# corporate_actions:
+#   alter table corporate_actions add column if not exists is_ocr boolean default false;
+#
 # For OCR support (scanned PDFs), also needs the tesseract-ocr system
 # binary, not just the pytesseract Python package:
 #   pip install pytesseract pillow
@@ -47,6 +55,16 @@
 #   python extract_corporate_action_details.py                # process rows with details still null
 #   python extract_corporate_action_details.py --limit 20      # just the first 20 (useful for testing)
 #   python extract_corporate_action_details.py --dry-run       # print what would happen, don't write/upload
+#
+# Backfilling rows scraped before this version (which had a
+# "[OCR — verify against PDF]" text prefix baked into `details`, and
+# hard-truncated text at 800 chars with all paragraph breaks collapsed):
+#   update corporate_actions
+#   set details = null
+#   where details like '[OCR — verify against PDF]%'
+#      or details like '%…';
+# then just rerun this script normally — `details is null` is the
+# selection criterion, so only those rows get re-extracted.
 
 import argparse
 import io
@@ -83,10 +101,9 @@ HEADERS = {
 }
 
 MAX_PDF_BYTES = 15 * 1024 * 1024  # skip anything absurdly large — not a normal filing
-MAX_PAGES_READ = 5  # the info we need is always in the first few pages
+MAX_PAGES_READ = 5  # the info we need is almost always in the first few pages
 MAX_OCR_PAGES = 3  # OCR is slow — cap tighter than regular text extraction
 OCR_RESOLUTION_SCALE = 2.0  # ~150 DPI equivalent, matches pdf-reading skill guidance
-EXCERPT_LENGTH = 800
 
 # A flexible date phrase. Handles real-world variants confirmed across
 # both clean-text (FDHB) and OCR'd (NICO) filings:
@@ -174,7 +191,7 @@ def extract_text(pdf_bytes: bytes) -> str | None:
                 text = page.extract_text()
                 if text:
                     pages_text.append(text)
-            return "\n".join(pages_text) if pages_text else None
+            return "\n\n".join(pages_text) if pages_text else None
     except Exception as e:
         print(f"  FAIL parsing PDF: {e}")
         return None
@@ -207,22 +224,32 @@ def extract_text_via_ocr(pdf_bytes: bytes) -> str | None:
                 ocr_text = pytesseract.image_to_string(pil_image)
                 if ocr_text.strip():
                     pages_text.append(ocr_text)
-            return "\n".join(pages_text) if pages_text else None
+            return "\n\n".join(pages_text) if pages_text else None
     except Exception as e:
         print(f"  FAIL OCR: {e}")
         return None
 
 
-def clean_excerpt(text: str) -> str:
-    # Collapse whitespace/line breaks, drop the excerpt to a readable length
-    # at a word boundary rather than mid-word.
-    collapsed = re.sub(r"\s+", " ", text).strip()
-    if len(collapsed) <= EXCERPT_LENGTH:
-        return collapsed
-    cut = collapsed.rfind(" ", 0, EXCERPT_LENGTH)
-    if cut == -1:
-        cut = EXCERPT_LENGTH
-    return collapsed[:cut] + "…"
+def format_paragraphs(text: str) -> str:
+    """Reformat extracted/OCR'd PDF text into clean, readable paragraphs
+    WITHOUT truncating anything. Collapses intra-paragraph whitespace/line-
+    wrap noise while preserving paragraph breaks, so `details` reads as
+    actual paragraphs instead of one run-on line or a mid-sentence cutoff.
+
+    Full text is kept — many rows (especially Announcement-type) have no
+    PDF for the user to fall back to on the detail page, so `details`
+    needs to be complete on its own.
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    raw_paragraphs = re.split(r"\n\s*\n+", normalized)
+    paragraphs = [re.sub(r"\s+", " ", p).strip() for p in raw_paragraphs]
+    paragraphs = [p for p in paragraphs if p]
+
+    # OCR output — and some single-column PDF extractions — sometimes has
+    # no blank lines at all, producing just one big paragraph. That's a
+    # real limitation of the source formatting, not a bug to work around
+    # here; nothing more to recover without guessing at sentence breaks.
+    return "\n\n".join(paragraphs)
 
 
 def clean_date(text: str) -> str:
@@ -231,14 +258,14 @@ def clean_date(text: str) -> str:
     22™ instead of 29th/22nd) — the digit/month/year is unambiguous
     either way, this just makes the displayed string readable.
     """
-    collapsed = clean_excerpt(text)
+    collapsed = re.sub(r"\s+", " ", text).strip()
     return re.sub(r"(\d{1,2})(?:st|nd|rd|th|[\"'\u2033\u2122%\u00b0]{1,2})?", r"\1", collapsed, count=1)
 
 
 def build_dividend_summary(text: str) -> str | None:
     """Best-effort structured line for Dividend-type rows. Returns None
     if we can't confidently find an amount — better to fall back to the
-    generic excerpt than print a wrong number.
+    full formatted text than print a wrong number.
     """
     amount_match = DIVIDEND_AMOUNT_RE.search(text)
     if not amount_match:
@@ -258,12 +285,12 @@ def build_dividend_summary(text: str) -> str | None:
 
 
 def build_details(row_type: str, text: str) -> str:
+    formatted = format_paragraphs(text)
     if row_type == "Dividend":
         summary = build_dividend_summary(text)
         if summary:
-            excerpt = clean_excerpt(text)
-            return f"{summary}\n\n{excerpt}"
-    return clean_excerpt(text)
+            return f"{summary}\n\n{formatted}"
+    return formatted
 
 
 def process(limit: int | None, dry_run: bool, delay: float):
@@ -280,7 +307,7 @@ def process(limit: int | None, dry_run: bool, delay: float):
     # uploaded if you ran this before the storage migration existed.
     query = (
         supabase.table("corporate_actions")
-        .select("id, type, headline, source_url, slug, details, pdf_storage_path")
+        .select("id, type, headline, source_url, slug, details, pdf_storage_path, is_ocr")
         .not_.is_("source_url", "null")
     )
     if limit:
@@ -292,6 +319,7 @@ def process(limit: int | None, dry_run: bool, delay: float):
 
     updated = 0
     failed = 0
+    ocr_count = 0
 
     for row in rows:
         print(f"[{row['id']}] {row['type']} — {row['headline']} ({row['source_url']})")
@@ -329,7 +357,8 @@ def process(limit: int | None, dry_run: bool, delay: float):
         if text:
             details = build_details(row["type"], text)
             if used_ocr:
-                details = f"[OCR — verify against PDF]\n{details}"
+                ocr_count += 1
+                print("  (extracted via OCR — flagged internally via is_ocr, not shown to users)")
             print(f"  -> {details[:120]}...")
 
             # Diagnostic: if this is a Dividend row and the summary line
@@ -347,6 +376,8 @@ def process(limit: int | None, dry_run: bool, delay: float):
 
             if row["details"] is None:
                 update_fields["details"] = details
+            if used_ocr:
+                update_fields["is_ocr"] = True
 
         if not dry_run:
             supabase.table("corporate_actions").update(update_fields).eq(
@@ -359,6 +390,7 @@ def process(limit: int | None, dry_run: bool, delay: float):
     print()
     print("=" * 60)
     print(f"Processed: {updated}")
+    print(f"Extracted via OCR (flagged is_ocr, worth spot-checking): {ocr_count}")
     print(f"Failed (download error): {failed}")
     if dry_run:
         print("(--dry-run set — no rows were actually written, no PDFs uploaded)")
