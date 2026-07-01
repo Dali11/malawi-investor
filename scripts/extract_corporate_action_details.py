@@ -10,6 +10,12 @@
 #        date via regex, and prepends that as a structured summary line.
 #      - Everything else: stores a cleaned excerpt of the PDF's text
 #        (first ~800 chars of real content, skipping boilerplate headers).
+#      - If the PDF has no text layer (confirmed to happen regularly —
+#        several NICO filings are scanned images), falls back to OCR via
+#        pytesseract. OCR results are prefixed "[OCR — verify against
+#        PDF]" since OCR can misread digits, which matters a lot for the
+#        dividend-amount regex above — treat OCR'd numbers as provisional
+#        until spot-checked, the same way we caught the FDHB amount bug.
 #   2. Uploads the PDF itself to the `corporate-action-pdfs` Supabase
 #      Storage bucket and sets `pdf_storage_path`, so /markets/corporate-
 #      actions/[slug] can offer a "Download PDF" link hosted on your own
@@ -28,6 +34,15 @@
 # AND a Storage bucket named "corporate-action-pdfs" created (set to
 # Public) in the Supabase dashboard — see that migration file's comments.
 #
+# For OCR support (scanned PDFs), also needs the tesseract-ocr system
+# binary, not just the pytesseract Python package:
+#   pip install pytesseract pillow
+#   Windows: https://github.com/UB-Mannheim/tesseract/wiki
+#   Mac:     brew install tesseract
+#   Linux:   apt install tesseract-ocr
+# Without it, OCR is silently skipped and scanned PDFs just get their
+# PDF stored with details left null, same as before OCR support existed.
+#
 # Usage:
 #   python extract_corporate_action_details.py                # process rows with details still null
 #   python extract_corporate_action_details.py --limit 20      # just the first 20 (useful for testing)
@@ -44,6 +59,13 @@ import pdfplumber
 import requests
 from dotenv import load_dotenv
 from supabase import create_client
+
+try:
+    import pytesseract
+    from PIL import Image
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env.local")
@@ -62,12 +84,14 @@ HEADERS = {
 
 MAX_PDF_BYTES = 15 * 1024 * 1024  # skip anything absurdly large — not a normal filing
 MAX_PAGES_READ = 5  # the info we need is always in the first few pages
+MAX_OCR_PAGES = 3  # OCR is slow — cap tighter than regular text extraction
+OCR_RESOLUTION_SCALE = 2.0  # ~150 DPI equivalent, matches pdf-reading skill guidance
 EXCERPT_LENGTH = 800
 
-# A flexible date phrase: "Wednesday, 4th February 2026", "4th February 2026",
-# or "February 4, 2026" — MSE filings aren't consistent about weekday prefixes
-# or ordinal suffixes, so this covers the common real-world variants.
-DATE_PHRASE = r"(?:[A-Za-z]+day,?\s*)?\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+\d{4}"
+# A flexible date phrase: "Wednesday, 4th February 2026", "17th of December 2025",
+# or "February 4, 2026" — MSE filings aren't consistent about weekday prefixes,
+# ordinal suffixes, or an "of" between day and month.
+DATE_PHRASE = r"(?:[A-Za-z]+day,?\s*)?\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?[A-Za-z]+\s+\d{4}"
 
 # Specifically requires "per share" immediately after the number — this is
 # what distinguishes the actual per-share dividend from the aggregate payout
@@ -78,17 +102,19 @@ DIVIDEND_AMOUNT_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Real filings say "will trade ex-dividend from <date>", not the generic
-# "Ex-dividend date:" label originally assumed here.
+# Real filings phrase this multiple ways: "will trade ex-dividend from
+# <date>", or "the ex-dividend date is <date>" — the "is" here isn't
+# whitespace, so the connector needs to allow it explicitly rather than
+# just [:\s]*.
 EX_DATE_RE = re.compile(
-    rf"(?:ex[- ]dividend (?:date|from)|trade ex-dividend from)[:\s]*({DATE_PHRASE})",
+    rf"(?:ex[- ]dividend (?:date|from)|trade ex-dividend from)\s*(?:is|:)?\s*({DATE_PHRASE})",
     re.IGNORECASE,
 )
 
-# Similarly, real filings say "will be paid on <date>" / "paid on <date>",
-# not always the literal "Payment date:" label.
+# Similarly: "will be paid on <date>", "paid on <date>", or "payable on
+# <date>" all appear across different filings.
 PAYMENT_DATE_RE = re.compile(
-    rf"(?:payment date|will be paid on|paid on)[:\s]*({DATE_PHRASE})",
+    rf"(?:payment date|will be paid on|paid on|payable on)[:\s]*({DATE_PHRASE})",
     re.IGNORECASE,
 )
 
@@ -143,6 +169,39 @@ def extract_text(pdf_bytes: bytes) -> str | None:
             return "\n".join(pages_text) if pages_text else None
     except Exception as e:
         print(f"  FAIL parsing PDF: {e}")
+        return None
+
+
+def extract_text_via_ocr(pdf_bytes: bytes) -> str | None:
+    """Fallback for scanned/image-only PDFs — rasterizes the first few
+    pages and runs OCR. Confirmed necessary: several NICO filings (trading
+    statements, dividend notices) are genuinely scanned documents with no
+    text layer at all, not a pdfplumber parsing gap.
+
+    Requires system tesseract-ocr installed alongside the pytesseract
+    Python package (`pip install pytesseract pillow`):
+      Windows: https://github.com/UB-Mannheim/tesseract/wiki
+      Mac:     brew install tesseract
+      Linux:   apt install tesseract-ocr
+    If tesseract isn't installed, this fails gracefully — caller falls
+    back to "no extractable text", same as before OCR was added.
+    """
+    if not OCR_AVAILABLE:
+        return None
+
+    try:
+        import pdfplumber as _pp  # rendering via pdfplumber's underlying pdfium page
+
+        with _pp.open(io.BytesIO(pdf_bytes)) as pdf:
+            pages_text = []
+            for page in pdf.pages[:MAX_OCR_PAGES]:
+                pil_image = page.to_image(resolution=150).original
+                ocr_text = pytesseract.image_to_string(pil_image)
+                if ocr_text.strip():
+                    pages_text.append(ocr_text)
+            return "\n".join(pages_text) if pages_text else None
+    except Exception as e:
+        print(f"  FAIL OCR: {e}")
         return None
 
 
@@ -239,10 +298,20 @@ def process(limit: int | None, dry_run: bool, delay: float):
             print(f"  (dry-run) would upload PDF as {slug}.pdf")
 
         text = extract_text(pdf_bytes)
+        used_ocr = False
         if not text:
-            print("  no extractable text (likely a scanned/image-only PDF) — PDF still stored")
-        else:
+            if OCR_AVAILABLE:
+                print("  no text layer — trying OCR (slower)...")
+                text = extract_text_via_ocr(pdf_bytes)
+                used_ocr = text is not None
+            if not text:
+                reason = "OCR found nothing either" if OCR_AVAILABLE else "OCR not installed"
+                print(f"  no extractable text ({reason}) — PDF still stored")
+
+        if text:
             details = build_details(row["type"], text)
+            if used_ocr:
+                details = f"[OCR — verify against PDF]\n{details}"
             print(f"  -> {details[:120]}...")
             if row["details"] is None:
                 update_fields["details"] = details
