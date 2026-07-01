@@ -8,9 +8,9 @@
 
 import { Info, ExternalLink } from 'lucide-react'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { IndexCard } from '@/components/markets/IndexCard'
 import { TrendChart } from '@/components/home/TrendChart'
 import type { MseIndex } from '@/types/database'
-import { IndexCard } from '@/components/markets/IndexCard'
 
 const INDEX_NAMES: Record<string, string> = {
     MASI: 'Malawi All Share Index',
@@ -56,6 +56,8 @@ export default async function IndicesPage() {
     }
 
     const masi = latestByCode.get('MASI') ?? null
+    const mdsi = latestByCode.get('MDSI') ?? null
+    const mfsi = latestByCode.get('MFSI') ?? null
     const hasAnyData = latestByCode.size > 0
     const marketCap = masi?.market_cap ?? null
 
@@ -129,19 +131,54 @@ export default async function IndicesPage() {
                                 </p>
                             </div>
                             <div className="p-4">
-                                <TrendChart indexCode="MASI" label="MASI level" />
+                                <TrendChart indexCode="MASI" label="MASI level" defaultRange="5D" />
                             </div>
                         </div>
                     )}
+
+                    {/* MDSI / MFSI synthetic charts — these two never publish an
+                        absolute level, so the chart reconstructs one by chaining
+                        daily % changes onto a base of 100. Only valid across
+                        consecutive trading days, hence the explicit "rebased"
+                        labeling and the disclaimer below. */}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {mdsi?.day_change_pct !== null && mdsi !== null && (
+                            <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-(--shadow-card)">
+                                <div className="flex items-center justify-between border-b-[0.5px] border-(--color-border-tertiary) px-4 py-2.5">
+                                    <p className="text-[11px] font-bold tracking-wider text-(--color-text-tertiary) uppercase">
+                                        MDSI — Synthetic Level
+                                    </p>
+                                </div>
+                                <div className="p-4">
+                                    <TrendChart indexCode="MDSI" label="MDSI (rebased to 100)" defaultRange="5D" />
+                                </div>
+                            </div>
+                        )}
+                        {mfsi?.day_change_pct !== null && mfsi !== null && (
+                            <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-(--shadow-card)">
+                                <div className="flex items-center justify-between border-b-[0.5px] border-(--color-border-tertiary) px-4 py-2.5">
+                                    <p className="text-[11px] font-bold tracking-wider text-(--color-text-tertiary) uppercase">
+                                        MFSI — Synthetic Level
+                                    </p>
+                                </div>
+                                <div className="p-4">
+                                    <TrendChart indexCode="MFSI" label="MFSI (rebased to 100)" defaultRange="5D" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Data notice */}
                     <div className="flex items-start gap-2.5 rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-info) p-3.5">
                         <Info size={14} className="mt-0.5 shrink-0" style={{ color: 'var(--color-text-info)' }} aria-hidden="true" />
                         <p className="text-[12px] leading-relaxed" style={{ color: 'var(--color-text-info)' }}>
-                            MASI is the only index published with an absolute level by our source — MDSI and MFSI
-                            are only ever reported as day/week/YTD percentage changes, so no chart or absolute
-                            value is shown for those two. Figures are scraped daily and may lag the official
-                            Malawi Stock Exchange feed by a trading day.
+                            MASI is the only index published with an absolute level by our source. MDSI and MFSI
+                            never publish one — their charts above are a synthetic level we reconstruct by chaining
+                            daily % changes onto a base of 100, which is only valid across consecutive trading days
+                            we&apos;ve actually tracked (older, sparsely backfilled snapshots can&apos;t be chained
+                            this way, so those charts reflect only the period since live daily tracking began).
+                            Figures are scraped daily and may lag the official Malawi Stock Exchange feed by a
+                            trading day.
                         </p>
                     </div>
                 </>

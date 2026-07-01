@@ -1,172 +1,158 @@
 """
-Daily MSE snapshot scraper — fixed version.
+Malawi Stock Exchange (MSE) daily share price scraper.
 
-The previous version found ALL links matching /mse/<slug>.html
-anywhere on the page (including the "Top Gainers" / "Bottom Losers"
-summary widgets near the top, which link to the same pages), then
-walked up to the nearest <tr> ancestor. Because the same symbol can
-appear in multiple places on the page, and document order isn't
-guaranteed to put the real listings-table row first, this sometimes
-picked up the wrong price for a counter on a given day.
+Uses a real headless browser (Playwright) instead of a plain HTTP client,
+because mse.co.mw sits behind basic bot-detection that blocks simple
+requests-style fetches. This just renders the page like a normal browser
+would and reads the public share-price table — no auth bypass, no CAPTCHA
+solving, nothing adversarial.
 
-This version explicitly finds the "Listed companies/securities"
-table — identified by being the table that contains the most rows
-matching our counters — and only reads prices from rows in that one
-table, ignoring the summary widgets entirely.
+Setup:
+    pip install playwright beautifulsoup4
+    playwright install chromium
+
+Usage:
+    python mse_scraper.py
+    python mse_scraper.py --out prices.csv
 """
 
-import requests
-from bs4 import BeautifulSoup
-from supabase import create_client
-from datetime import date
-from dotenv import load_dotenv
-import os
-import re
+import argparse
+import csv
 import sys
+import time
+from datetime import datetime
 
-load_dotenv(".env.local")
+from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
 
-SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+MAINBOARD_URL = "https://mse.co.mw/market/mainboard"
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-PRICE_RE = re.compile(r"\d[\d,]*\.\d{2}")
-SIGNED_RE = re.compile(r"[+-]\d+\.\d{2}")
-SYMBOL_HREF_RE = re.compile(r"/mse/([a-z0-9\-]+)\.html")
-
-DRY_RUN = "--dry-run" in sys.argv
-
-
-def find_listings_table(soup: BeautifulSoup):
-    """
-    The page has multiple <table> elements (gainers widget, losers
-    widget, and the full listings table). The real listings table is
-    the one with by far the most rows linking to /mse/<slug>.html —
-    the summary widgets only show 2-8 rows each, while the full
-    listing has all ~16.
-    """
-    best_table = None
-    best_count = 0
-
-    for table in soup.find_all("table"):
-        links = table.find_all("a", href=SYMBOL_HREF_RE)
-        if len(links) > best_count:
-            best_count = len(links)
-            best_table = table
-
-    return best_table
+# A realistic, current desktop Chrome UA. Update if the site starts
+# fingerprinting more aggressively.
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
 
 
-def scrape_mse():
-    if DRY_RUN:
-        print("=== DRY RUN — no database writes will happen ===\n")
+def fetch_rendered_html(
+    url: str, wait_selector: str = "table", timeout_ms: int = 30000, debug: bool = False
+) -> str:
+    """Load `url` in a real headless browser and return the rendered HTML."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent=USER_AGENT,
+            viewport={"width": 1366, "height": 900},
+            locale="en-US",
+        )
+        page = context.new_page()
+        page.goto(url, wait_until="networkidle", timeout=timeout_ms)
 
-    url = "https://afx.kwayisi.org/mse/"
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    try:
-        res = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(res.text, "lxml")
-    except Exception as e:
-        print(f"Failed to fetch page: {e}")
-        return
-
-    listings_table = find_listings_table(soup)
-    if listings_table is None:
-        print("Could not find the listings table on the page — aborting.")
-        return
-
-    today = date.today().isoformat()
-    updated = 0
-    seen = set()
-
-    rows = listings_table.find_all("tr")
-
-    for row in rows:
-        link = row.find("a", href=SYMBOL_HREF_RE)
-        if not link:
-            continue  # header row or a row with no counter link
-
-        symbol = link.get_text(strip=True).upper()
-
-        if " " in symbol or len(symbol) > 10:
-            continue
-        if any(x in symbol for x in ["MASI", "MDSI", "MFSI", "INDEX"]):
-            continue
-        if symbol in seen:
-            continue
-
-        row_text = row.get_text(" ", strip=True)
-
-        prices = PRICE_RE.findall(row_text)
-        if not prices:
-            print(f"Skipping {symbol} — no price pattern in row: {row_text}")
-            continue
-
+        # Give any client-side table rendering a moment to finish.
         try:
-            price = float(prices[0].replace(",", ""))
+            page.wait_for_selector(wait_selector, timeout=timeout_ms)
         except Exception:
-            print(f"Skipping {symbol} — could not parse price")
+            pass  # fall through; we'll just parse whatever loaded
+
+        if debug:
+            page.screenshot(path="debug_screenshot.png", full_page=True)
+            print("Saved debug_screenshot.png")
+
+        html = page.content()
+        browser.close()
+        return html
+
+
+def parse_price_table(html: str) -> list[dict]:
+    """Parse the share-price table out of the rendered HTML.
+
+    Table structure can change without notice — if this returns nothing,
+    open the page in a real browser, inspect the table, and adjust the
+    selectors below.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    rows_out = []
+
+    table = soup.find("table")
+    if table is None:
+        return rows_out
+
+    headers = [th.get_text(strip=True) for th in table.find_all("th")]
+
+    for tr in table.find_all("tr"):
+        cells = [td.get_text(strip=True) for td in tr.find_all("td")]
+        if not cells:
             continue
+        if headers and len(headers) == len(cells):
+            rows_out.append(dict(zip(headers, cells)))
+        else:
+            rows_out.append({"raw": cells})
 
-        price_pos = row_text.find(prices[0])
-        after_price = row_text[price_pos + len(prices[0]):]
-        signed_match = SIGNED_RE.search(after_price)
+    return rows_out
 
-        change_pct = None
-        if signed_match:
-            raw_change = float(signed_match.group())
-            next_char = after_price[signed_match.end():signed_match.end() + 1]
-            if next_char == "%":
-                change_pct = raw_change
-            else:
-                prev_price = price - raw_change
-                if prev_price:
-                    change_pct = round((raw_change / prev_price) * 100, 2)
 
-        seen.add(symbol)
+def save_csv(rows: list[dict], path: str) -> None:
+    if not rows:
+        print("No rows scraped — nothing to save.")
+        return
+    fieldnames = sorted({k for row in rows for k in row.keys()})
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Saved {len(rows)} rows to {path}")
 
-        if DRY_RUN:
-            print(f"[DRY RUN] {symbol}: would write price=MK {price} change_pct={change_pct}")
-            updated += 1
-            continue
 
-        counter = supabase.table("mse_counters").select("id").eq("symbol", symbol).execute()
-        if not counter.data:
-            print(f"Not in DB: {symbol}")
-            continue
+def main():
+    parser = argparse.ArgumentParser(description="Scrape MSE daily share prices")
+    parser.add_argument("--url", default=MAINBOARD_URL, help="Page to scrape")
+    parser.add_argument(
+        "--out",
+        default=f"mse_prices_{datetime.now():%Y%m%d_%H%M%S}.csv",
+        help="Output CSV path",
+    )
+    parser.add_argument(
+        "--retries", type=int, default=3, help="Retries if the page fails to load"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Save debug.html and debug_screenshot.png of the rendered page",
+    )
+    args = parser.parse_args()
 
-        counter_id = counter.data[0]["id"]
+    html = None
+    last_err = None
+    for attempt in range(1, args.retries + 1):
+        try:
+            print(f"Attempt {attempt}/{args.retries}: loading {args.url} ...")
+            html = fetch_rendered_html(args.url, debug=args.debug)
+            break
+        except Exception as e:
+            last_err = e
+            print(f"  failed: {e}")
+            time.sleep(3 * attempt)  # back off a bit between retries
 
-        existing = (
-            supabase.table("mse_prices")
-            .select("id")
-            .eq("counter_id", counter_id)
-            .eq("price_date", today)
-            .execute()
+    if html is None:
+        print(f"Could not load the page after {args.retries} attempts: {last_err}")
+        sys.exit(1)
+
+    if args.debug:
+        with open("debug.html", "w", encoding="utf-8") as f:
+            f.write(html)
+        print("Saved debug.html")
+
+    rows = parse_price_table(html)
+    if not rows:
+        print(
+            "Parsed 0 rows. The page structure may differ from what this script "
+            "expects, or it rendered without the table this time. Try saving "
+            "`html` to a file and inspecting it."
         )
 
-        if existing.data:
-            supabase.table("mse_prices") \
-                .update({"price": price, "change_pct": change_pct}) \
-                .eq("id", existing.data[0]["id"]) \
-                .execute()
-            print(f"Updated {symbol}: MK {price} ({change_pct}%)")
-        else:
-            supabase.table("mse_prices").insert({
-                "counter_id": counter_id,
-                "price": price,
-                "change_pct": change_pct,
-                "price_date": today,
-            }).execute()
-            print(f"Inserted {symbol}: MK {price} ({change_pct}%)")
-
-        updated += 1
-
-    mode = "[DRY RUN] " if DRY_RUN else ""
-    print(f"\n{mode}Done. {updated} counters updated for {today} (listings table had {len(rows)} rows)")
+    save_csv(rows, args.out)
 
 
 if __name__ == "__main__":
-    scrape_mse()
+    main()

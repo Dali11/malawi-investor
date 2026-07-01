@@ -15,13 +15,19 @@ export async function GET(request: NextRequest) {
     const range = rangeParam as RangeKey
 
     try {
+        const isMdsiOrMfsi = index && ['MDSI', 'MFSI'].includes(index.toUpperCase())
+
         const points = index
             ? await getIndexHistory(index, range)
             : symbol
                 ? await getCounterHistory(symbol, range)
                 : await getCompositeHistory(range)
 
-        return NextResponse.json({ points, isComposite: !symbol && !index })
+        return NextResponse.json({
+            points,
+            isComposite: !symbol && !index,
+            isSynthetic: Boolean(isMdsiOrMfsi),
+        })
     } catch (err) {
         console.error('Chart data fetch failed:', err)
         return NextResponse.json({ error: 'Failed to load chart data' }, { status: 500 })

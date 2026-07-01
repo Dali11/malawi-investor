@@ -74,6 +74,26 @@ export interface CorporateAction {
     created_at: string
 }
 
+export type IpoStatus = 'Upcoming' | 'Open' | 'Closed' | 'Listed'
+
+export interface Ipo {
+    id: number
+    counter_id: number | null
+    company_name: string
+    sector: string | null
+    status: IpoStatus
+    offer_price: number | null
+    shares_offered: number | null
+    min_investment: number | null
+    open_date: string | null
+    close_date: string | null
+    listing_date: string | null
+    summary: string
+    details: string | null
+    prospectus_url: string | null
+    created_at: string
+}
+
 export interface Course {
     id: string
     title: string

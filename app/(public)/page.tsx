@@ -27,7 +27,8 @@ export default async function HomePage() {
     .limit(4)
 
   const featured = analyses?.[0]
-  const latest = analyses?.slice(1) ?? []
+  const secondStory = analyses?.[1]
+  const latest = analyses?.slice(2) ?? []
 
   // Top gainers / losers
   const { data: prices } = await supabase
@@ -64,7 +65,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-6 border-b-[0.5px] border-(--color-border-tertiary) pb-6 lg:grid-cols-[1.3fr_1fr]">
-        {featured && <FeaturedAnalysis analysis={featured} related={latest} />}
+        {featured && <FeaturedAnalysis analysis={featured} secondStory={secondStory} related={latest} />}
         <MarketSnapshot movers={snapshot} />
       </div>
       <LatestAnalysis items={latest} />

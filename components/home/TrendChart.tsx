@@ -19,10 +19,11 @@ function formatTick(dateStr: string, range: RangeKey) {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export function TrendChart({ symbol, indexCode, label }: { symbol?: string | null; indexCode?: string | null; label?: string }) {
-    const [range, setRange] = useState<RangeKey>('1M')
+export function TrendChart({ symbol, indexCode, label, defaultRange }: { symbol?: string | null; indexCode?: string | null; label?: string; defaultRange?: RangeKey }) {
+    const [range, setRange] = useState<RangeKey>(defaultRange ?? '5D')
     const [points, setPoints] = useState<ChartPoint[]>([])
     const [isComposite, setIsComposite] = useState(false)
+    const [isSynthetic, setIsSynthetic] = useState(false)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
     const gradientId = useId()
@@ -48,6 +49,7 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
                 if (cancelled) return
                 setPoints(data.points ?? [])
                 setIsComposite(Boolean(data.isComposite))
+                setIsSynthetic(Boolean(data.isSynthetic))
             })
             .catch(() => {
                 if (!cancelled) setError(true)
@@ -80,12 +82,9 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
     }
     const isSparseSeries = points.length >= 2 && maxGapDays(points) > 45
 
-    // Compute a sensible y-axis domain rather than letting Recharts
-    // auto-stretch tiny fluctuations to fill the chart height. For the
-    // composite (a % change series that's often very close to 0), the
-    // domain always includes 0 and a generous minimum total span, so
-    // small day-to-day moves (common on this market) don't visually
-    // read as dramatic swings just because the axis stretched to fit.
+    // Compute a sensible y-axis domain. Composite (equal-weighted %)
+    // and synthetic (MDSI/MFSI rebased-to-100) series both get a
+    // minimum span so small day-to-day moves don't visually inflate.
     function getYDomain(): [number, number] {
         if (points.length === 0) return [0, 1]
         const values = points.map((p) => p.value)
@@ -103,14 +102,23 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
             return [mid - effectiveSpan / 2 - pad, mid + effectiveSpan / 2 + pad]
         }
 
+        if (isSynthetic) {
+            const span = Math.max(max - min, 2) // minimum 2-point span
+            const pad = span * 0.1
+            return [min - pad, max + pad]
+        }
+
         const span = max - min
         const pad = Math.max(span * 0.06, max * 0.005)
         return [min - pad, max + pad]
     }
 
     const yDomain = getYDomain()
-    const yTickFormatter = (value: number) =>
-        isComposite ? `${value.toFixed(1)}%` : value.toLocaleString('en', { maximumFractionDigits: 0 })
+    const yTickFormatter = (value: number) => {
+        if (isComposite) return `${value.toFixed(1)}%`
+        if (isSynthetic) return value.toFixed(1)
+        return value.toLocaleString('en', { maximumFractionDigits: 0 })
+    }
 
     const tooFewPoints = points.length < 2
 
@@ -188,13 +196,12 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
                                 tickLine={false}
                             />
                             <Tooltip
-                                formatter={(value) =>
-                                    typeof value !== 'number'
-                                        ? '—'
-                                        : isComposite
-                                            ? `${value.toFixed(2)}%`
-                                            : value.toLocaleString('en', { minimumFractionDigits: 2 })
-                                }
+                                formatter={(value) => {
+                                    if (typeof value !== 'number') return '—'
+                                    if (isComposite) return `${value.toFixed(2)}%`
+                                    if (isSynthetic) return value.toFixed(2)
+                                    return value.toLocaleString('en', { minimumFractionDigits: 2 })
+                                }}
                             />
                             <Area
                                 type="linear"
@@ -213,6 +220,11 @@ export function TrendChart({ symbol, indexCode, label }: { symbol?: string | nul
             {isComposite && (
                 <p className="mt-2 text-[10px] text-(--color-text-tertiary)">
                     Equal-weighted average across tracked counters — not the official MASI.
+                </p>
+            )}
+            {isSynthetic && !isSparseSeries && (
+                <p className="mt-2 text-[10px] text-(--color-text-tertiary)">
+                    Synthetic index rebased to 100 — built by chaining daily % changes since daily tracking began.
                 </p>
             )}
             {isSparseSeries && (
