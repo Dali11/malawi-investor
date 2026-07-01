@@ -8,7 +8,7 @@ import Link from 'next/link'
 
 export type CorporateAction = {
     symbol: string
-    type: 'Dividend' | 'AGM' | 'Rights Issue' | 'Stock Split' | 'Announcement'
+    type: 'Dividend' | 'AGM' | 'Rights Issue' | 'Stock Split' | 'Report' | 'Announcement'
     headline: string
     date: string // ISO date
 }
@@ -28,6 +28,7 @@ const TYPE_COLORS: Record<CorporateAction['type'], { bg: string; text: string }>
     AGM: { bg: 'var(--color-background-info)', text: 'var(--color-text-info)' },
     'Rights Issue': { bg: 'var(--color-background-warning)', text: 'var(--color-text-warning)' },
     'Stock Split': { bg: 'var(--color-background-warning)', text: 'var(--color-text-warning)' },
+    Report: { bg: 'var(--color-background-info)', text: 'var(--color-text-info)' },
     Announcement: { bg: 'var(--color-background-secondary)', text: 'var(--color-text-secondary)' },
 }
 

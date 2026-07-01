@@ -39,17 +39,6 @@ export interface MseIndex {
     index_date: string
 }
 
-export interface MseIndex {
-    id: number
-    index_code: 'MASI' | 'MDSI' | 'MFSI'
-    value: number | null
-    day_change_pct: number | null
-    week_change_pct: number | null
-    ytd_change_pct: number | null
-    market_cap: number | null
-    index_date: string
-}
-
 export interface Analysis {
     id: string
     counter_id: number | null
@@ -62,7 +51,7 @@ export interface Analysis {
     created_at: string
 }
 
-export type CorporateActionType = 'Dividend' | 'AGM' | 'Rights Issue' | 'Stock Split' | 'Announcement'
+export type CorporateActionType = 'Dividend' | 'AGM' | 'Rights Issue' | 'Stock Split' | 'Report' | 'Announcement'
 
 export interface CorporateAction {
     id: number
@@ -71,6 +60,10 @@ export interface CorporateAction {
     headline: string
     details: string | null
     action_date: string
+    // Added by corporate_actions_add_source_migration.sql — populated
+    // by scrape_corporate_actions.py, null for manually-entered rows.
+    source_url: string | null
+    source: 'manual' | 'scrape_african_markets'
     created_at: string
 }
 
