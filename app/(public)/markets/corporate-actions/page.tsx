@@ -24,20 +24,24 @@ export default async function CorporateActionsPage() {
 
     const { data: rawActions } = await supabase
         .from('corporate_actions')
-        .select('type, headline, details, action_date, mse_counters(symbol, company_name)')
+        .select('type, headline, details, action_date, slug, mse_counters(symbol, company_name)')
         .order('action_date', { ascending: false })
         .limit(200)
 
-    const actions: CorporateActionRow[] = (rawActions ?? [])
-        .filter((a: any) => a.mse_counters?.symbol)
-        .map((a: any) => ({
-            symbol: a.mse_counters.symbol as string,
-            company_name: a.mse_counters.company_name as string,
-            type: a.type,
-            headline: a.headline,
-            details: a.details,
-            date: a.action_date,
-        }))
+    // Previously this filtered out any row without a matched counter_id,
+    // which silently dropped every exchange-wide notice (counter_id=null
+    // is valid per the schema) AND every row scrape_corporate_actions.py
+    // holds back for review. Show them with a null symbol instead —
+    // CorporateActionsList renders those as "MSE" rather than a ticker.
+    const actions: CorporateActionRow[] = (rawActions ?? []).map((a: any) => ({
+        symbol: a.mse_counters?.symbol ?? null,
+        company_name: a.mse_counters?.company_name ?? null,
+        type: a.type,
+        headline: a.headline,
+        details: a.details,
+        date: a.action_date,
+        slug: a.slug,
+    }))
 
     if (actions.length === 0) {
         return (

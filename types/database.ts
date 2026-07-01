@@ -64,6 +64,22 @@ export interface CorporateAction {
     // by scrape_corporate_actions.py, null for manually-entered rows.
     source_url: string | null
     source: 'manual' | 'scrape_african_markets'
+    // Added by corporate_actions_add_slug_and_pdf_migration.sql —
+    // populated by extract_corporate_action_details.py. Used by
+    // /markets/corporate-actions/[slug].
+    slug: string | null
+    pdf_storage_path: string | null
+    created_at: string
+}
+
+export interface NewsItem {
+    id: number
+    counter_id: number | null
+    headline: string
+    summary: string | null
+    source_name: string | null
+    source_url: string | null
+    published_at: string
     created_at: string
 }
 

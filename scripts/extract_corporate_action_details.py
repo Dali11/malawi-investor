@@ -4,23 +4,34 @@
 # That first pass only captures the announcement title (e.g. "Trading
 # statement", "Unclaimed dividends") plus a link to the PDF — the actual
 # substance (dividend amount, ex-dividend/payment dates, AGM venue/time)
-# lives inside the PDF itself. This script downloads each row's PDF,
-# extracts its text, and fills in `details`:
-#   - Dividend rows: tries to pull amount-per-share + ex-date + payment
-#     date via regex, and prepends that as a structured summary line.
-#   - Everything else: stores a cleaned excerpt of the PDF's text
-#     (first ~800 chars of real content, skipping boilerplate headers).
+# lives inside the PDF itself. This script downloads each row's PDF and:
+#   1. Extracts text and fills in `details`:
+#      - Dividend rows: tries to pull amount-per-share + ex-date + payment
+#        date via regex, and prepends that as a structured summary line.
+#      - Everything else: stores a cleaned excerpt of the PDF's text
+#        (first ~800 chars of real content, skipping boilerplate headers).
+#   2. Uploads the PDF itself to the `corporate-action-pdfs` Supabase
+#      Storage bucket and sets `pdf_storage_path`, so /markets/corporate-
+#      actions/[slug] can offer a "Download PDF" link hosted on your own
+#      platform instead of pointing back to african-markets.com.
+#   3. Sets `slug` if it isn't already set, for the [slug] route.
 #
 # This is best-effort — MSE announcement PDFs are inconsistently
 # formatted (some are scanned images, some are two-column layouts,
 # some are announcement letters, some are financial statements).
-# Where extraction fails or looks unreliable, it leaves `details` as
-# null rather than guessing, and logs it so you can review manually.
+# Where text extraction fails or looks unreliable, `details` is left
+# null rather than guessing, and it's logged so you can review manually.
+# The PDF is still uploaded and `pdf_storage_path` still set even when
+# text extraction fails, so a download link is available either way.
+#
+# Requires: corporate_actions_add_slug_and_pdf_migration.sql run first,
+# AND a Storage bucket named "corporate-action-pdfs" created (set to
+# Public) in the Supabase dashboard — see that migration file's comments.
 #
 # Usage:
 #   python extract_corporate_action_details.py                # process rows with details still null
 #   python extract_corporate_action_details.py --limit 20      # just the first 20 (useful for testing)
-#   python extract_corporate_action_details.py --dry-run       # print what would be extracted, don't write
+#   python extract_corporate_action_details.py --dry-run       # print what would happen, don't write/upload
 
 import argparse
 import io
@@ -39,6 +50,8 @@ load_dotenv(PROJECT_ROOT / ".env.local")
 
 SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+STORAGE_BUCKET = "corporate-action-pdfs"
 
 HEADERS = {
     "User-Agent": (
@@ -80,6 +93,14 @@ PAYMENT_DATE_RE = re.compile(
 )
 
 
+def slugify(headline: str, row_id: int) -> str:
+    # id-suffixed because headlines like "Trading statement" repeat across
+    # many rows/years for the same and different counters — headline text
+    # alone isn't unique.
+    base = re.sub(r"[^a-zA-Z0-9]+", "-", headline.lower()).strip("-")
+    return f"{base}-{row_id}"
+
+
 def fetch_pdf_bytes(url: str) -> bytes | None:
     try:
         resp = requests.get(url, headers=HEADERS, timeout=30, stream=True)
@@ -91,6 +112,23 @@ def fetch_pdf_bytes(url: str) -> bytes | None:
         return resp.content
     except requests.RequestException as e:
         print(f"  FAIL downloading: {e}")
+        return None
+
+
+def upload_pdf(supabase, pdf_bytes: bytes, slug: str) -> str | None:
+    """Uploads to Storage, returns the storage path (not the full URL —
+    the frontend builds the public URL from this path + bucket name).
+    """
+    path = f"{slug}.pdf"
+    try:
+        supabase.storage.from_(STORAGE_BUCKET).upload(
+            path,
+            pdf_bytes,
+            {"content-type": "application/pdf", "upsert": "true"},
+        )
+        return path
+    except Exception as e:
+        print(f"  FAIL uploading PDF to storage: {e}")
         return None
 
 
@@ -160,17 +198,20 @@ def process(limit: int | None, dry_run: bool, delay: float):
 
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+    # Process rows missing EITHER details or a stored PDF — a row can
+    # already have details from a prior run but not yet have a PDF
+    # uploaded if you ran this before the storage migration existed.
     query = (
         supabase.table("corporate_actions")
-        .select("id, type, headline, source_url")
-        .is_("details", "null")
+        .select("id, type, headline, source_url, slug, details, pdf_storage_path")
         .not_.is_("source_url", "null")
     )
     if limit:
         query = query.limit(limit)
 
-    rows = query.execute().data
-    print(f"Found {len(rows)} rows with a PDF link but no extracted details.\n")
+    all_rows = query.execute().data
+    rows = [r for r in all_rows if r["details"] is None or r["pdf_storage_path"] is None]
+    print(f"Found {len(rows)} rows needing details and/or a stored PDF.\n")
 
     updated = 0
     failed = 0
@@ -178,24 +219,36 @@ def process(limit: int | None, dry_run: bool, delay: float):
     for row in rows:
         print(f"[{row['id']}] {row['type']} — {row['headline']} ({row['source_url']})")
 
+        slug = row["slug"] or slugify(row["headline"], row["id"])
+
         pdf_bytes = fetch_pdf_bytes(row["source_url"])
         if pdf_bytes is None:
             failed += 1
             time.sleep(delay)
             continue
 
+        update_fields = {"slug": slug}
+
+        # Upload PDF regardless of whether text extraction succeeds below —
+        # a download link is useful even for scanned/image-only filings.
+        if row["pdf_storage_path"] is None and not dry_run:
+            storage_path = upload_pdf(supabase, pdf_bytes, slug)
+            if storage_path:
+                update_fields["pdf_storage_path"] = storage_path
+        elif row["pdf_storage_path"] is None and dry_run:
+            print(f"  (dry-run) would upload PDF as {slug}.pdf")
+
         text = extract_text(pdf_bytes)
         if not text:
-            print("  SKIP: no extractable text (likely a scanned/image-only PDF)")
-            failed += 1
-            time.sleep(delay)
-            continue
-
-        details = build_details(row["type"], text)
-        print(f"  -> {details[:120]}...")
+            print("  no extractable text (likely a scanned/image-only PDF) — PDF still stored")
+        else:
+            details = build_details(row["type"], text)
+            print(f"  -> {details[:120]}...")
+            if row["details"] is None:
+                update_fields["details"] = details
 
         if not dry_run:
-            supabase.table("corporate_actions").update({"details": details}).eq(
+            supabase.table("corporate_actions").update(update_fields).eq(
                 "id", row["id"]
             ).execute()
 
@@ -204,17 +257,17 @@ def process(limit: int | None, dry_run: bool, delay: float):
 
     print()
     print("=" * 60)
-    print(f"Updated: {updated}")
-    print(f"Failed/skipped: {failed}")
+    print(f"Processed: {updated}")
+    print(f"Failed (download error): {failed}")
     if dry_run:
-        print("(--dry-run set — no rows were actually written)")
+        print("(--dry-run set — no rows were actually written, no PDFs uploaded)")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract PDF content into corporate_actions.details")
+    parser = argparse.ArgumentParser(description="Extract PDF content + store PDF for corporate_actions")
     parser.add_argument("--limit", type=int, default=None, help="Only process the first N rows")
     parser.add_argument("--delay", type=float, default=1.0, help="Seconds between PDF downloads")
-    parser.add_argument("--dry-run", action="store_true", help="Print extracted details without writing")
+    parser.add_argument("--dry-run", action="store_true", help="Print what would happen without writing")
     args = parser.parse_args()
 
     process(limit=args.limit, dry_run=args.dry_run, delay=args.delay)

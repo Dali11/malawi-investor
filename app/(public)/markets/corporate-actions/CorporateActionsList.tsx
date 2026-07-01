@@ -5,12 +5,13 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
 export type CorporateActionRow = {
-    symbol: string
-    company_name: string
-    type: 'Dividend' | 'AGM' | 'Rights Issue' | 'Stock Split' | 'Announcement'
+    symbol: string | null
+    company_name: string | null
+    type: 'Dividend' | 'AGM' | 'Rights Issue' | 'Stock Split' | 'Report' | 'Announcement'
     headline: string
     details: string | null
     date: string // ISO
+    slug: string | null
 }
 
 const TYPE_COLORS: Record<CorporateActionRow['type'], { bg: string; text: string }> = {
@@ -18,11 +19,12 @@ const TYPE_COLORS: Record<CorporateActionRow['type'], { bg: string; text: string
     AGM: { bg: 'var(--color-background-info)', text: 'var(--color-text-info)' },
     'Rights Issue': { bg: 'var(--color-background-warning)', text: 'var(--color-text-warning)' },
     'Stock Split': { bg: 'var(--color-background-warning)', text: 'var(--color-text-warning)' },
+    Report: { bg: 'var(--color-background-info)', text: 'var(--color-text-info)' },
     Announcement: { bg: 'var(--color-background-secondary)', text: 'var(--color-text-secondary)' },
 }
 
 const TYPE_FILTERS: Array<CorporateActionRow['type'] | 'All'> = [
-    'All', 'Dividend', 'AGM', 'Rights Issue', 'Stock Split', 'Announcement',
+    'All', 'Dividend', 'AGM', 'Rights Issue', 'Stock Split', 'Report', 'Announcement',
 ]
 
 function formatDate(iso: string) {
@@ -38,8 +40,8 @@ export function CorporateActionsList({ actions }: { actions: CorporateActionRow[
         return actions.filter(a => {
             const matchesType = type === 'All' || a.type === type
             const matchesSearch = !q ||
-                a.symbol.toLowerCase().includes(q) ||
-                a.company_name.toLowerCase().includes(q) ||
+                (a.symbol?.toLowerCase().includes(q) ?? false) ||
+                (a.company_name?.toLowerCase().includes(q) ?? false) ||
                 a.headline.toLowerCase().includes(q)
             return matchesType && matchesSearch
         })
@@ -96,17 +98,30 @@ export function CorporateActionsList({ actions }: { actions: CorporateActionRow[
                                     {a.type}
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[13px] text-(--color-text-primary) leading-snug">{a.headline}</p>
+                                    {a.slug ? (
+                                        <Link
+                                            href={`/markets/corporate-actions/${a.slug}`}
+                                            className="text-[13px] text-(--color-text-primary) leading-snug no-underline hover:underline"
+                                        >
+                                            {a.headline}
+                                        </Link>
+                                    ) : (
+                                        <p className="text-[13px] text-(--color-text-primary) leading-snug">{a.headline}</p>
+                                    )}
                                     {a.details && (
                                         <p className="mt-0.5 text-[12px] text-(--color-text-secondary) leading-snug">{a.details}</p>
                                     )}
                                     <p className="mt-1 text-[11px] text-(--color-text-tertiary)">
-                                        <Link
-                                            href={`/mse/${a.symbol.toLowerCase()}`}
-                                            className="font-semibold text-(--color-text-primary) no-underline hover:underline"
-                                        >
-                                            {a.symbol}
-                                        </Link>
+                                        {a.symbol ? (
+                                            <Link
+                                                href={`/mse/${a.symbol.toLowerCase()}`}
+                                                className="font-semibold text-(--color-text-primary) no-underline hover:underline"
+                                            >
+                                                {a.symbol}
+                                            </Link>
+                                        ) : (
+                                            <span className="font-semibold text-(--color-text-primary)">MSE</span>
+                                        )}
                                         {a.company_name && <> · {a.company_name}</>}
                                         {' · '}
                                         {formatDate(a.date)}
