@@ -313,6 +313,20 @@ def process(limit: int | None, dry_run: bool, delay: float):
             if used_ocr:
                 details = f"[OCR — verify against PDF]\n{details}"
             print(f"  -> {details[:120]}...")
+
+            # Diagnostic: if this is a Dividend row and the summary line
+            # found an amount but no dates, print the raw text so the
+            # regex can be tuned against what OCR/extraction ACTUALLY
+            # produced rather than assumed clean source text — OCR often
+            # introduces spacing/character noise that breaks date matching
+            # even when the same wording works fine against clean text.
+            if dry_run and row["type"] == "Dividend" and "Ex-dividend" not in details and "Payment date" not in details:
+                print("  [DIAGNOSTIC] no dates matched — raw extracted text follows:")
+                print("  " + "-" * 56)
+                for line in text.splitlines():
+                    print(f"  {line}")
+                print("  " + "-" * 56)
+
             if row["details"] is None:
                 update_fields["details"] = details
 
