@@ -1,3 +1,4 @@
+import argparse
 import requests
 from bs4 import BeautifulSoup
 from supabase import create_client
@@ -23,6 +24,36 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     )
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Set from __main__ via --dry-run. When True, every write helper below
+# prints what it *would* have done instead of touching Supabase. Reads
+# (selects) still happen normally — dry-run only gates writes.
+DRY_RUN = False
+
+
+def db_insert(table, row, label=None):
+    """Insert, or print-and-skip in dry-run mode."""
+    if DRY_RUN:
+        print(f"[dry-run] would INSERT into {table}: {label or row}")
+        return
+    supabase.table(table).insert(row).execute()
+
+
+def db_update(table, row, match_id, label=None):
+    """Update by id, or print-and-skip in dry-run mode."""
+    if DRY_RUN:
+        print(f"[dry-run] would UPDATE {table} id={match_id}: {label or row}")
+        return
+    supabase.table(table).update(row).eq("id", match_id).execute()
+
+
+def db_upsert(table, row, on_conflict, label=None):
+    """Upsert, or print-and-skip in dry-run mode."""
+    if DRY_RUN:
+        print(f"[dry-run] would UPSERT into {table} (on {on_conflict}): {label or row}")
+        return
+    supabase.table(table).upsert(row, on_conflict=on_conflict).execute()
+
 
 PRICE_RE = re.compile(r"\d[\d,]*\.\d{2}")
 SIGNED_RE = re.compile(r"[+-]\d+\.\d{2}")
@@ -107,18 +138,24 @@ def scrape_mse():
         )
 
         if existing.data:
-            supabase.table("mse_prices") \
-                .update({"price": price, "change_pct": change_pct}) \
-                .eq("id", existing.data[0]["id"]) \
-                .execute()
+            db_update(
+                "mse_prices",
+                {"price": price, "change_pct": change_pct},
+                existing.data[0]["id"],
+                label=f"{symbol} MK {price} ({change_pct}%)",
+            )
             print(f"Updated {symbol}: MK {price} ({change_pct}%)")
         else:
-            supabase.table("mse_prices").insert({
-                "counter_id": counter_id,
-                "price": price,
-                "change_pct": change_pct,
-                "price_date": today,
-            }).execute()
+            db_insert(
+                "mse_prices",
+                {
+                    "counter_id": counter_id,
+                    "price": price,
+                    "change_pct": change_pct,
+                    "price_date": today,
+                },
+                label=f"{symbol} MK {price} ({change_pct}%)",
+            )
             print(f"Inserted {symbol}: MK {price} ({change_pct}%)")
 
         updated += 1
@@ -173,13 +210,10 @@ def scrape_indices():
             .execute()
         )
         if existing.data:
-            supabase.table("mse_indices") \
-                .update(row) \
-                .eq("id", existing.data[0]["id"]) \
-                .execute()
+            db_update("mse_indices", row, existing.data[0]["id"], label=f"{row['index_code']}: {row}")
             print(f"Updated {row['index_code']}: {row}")
         else:
-            supabase.table("mse_indices").insert(row).execute()
+            db_insert("mse_indices", row, label=f"{row['index_code']}: {row}")
             print(f"Inserted {row['index_code']}: {row}")
         updated += 1
 
@@ -190,14 +224,16 @@ SUFFIX_MULT = {"K": 1_000, "M": 1_000_000, "B": 1_000_000_000, "T": 1_000_000_00
 
 
 def parse_suffixed_number(s):
-    """'7.74T' -> 7_740_000_000_000.0, '4.36M' -> 4_360_000.0, '1,384' -> 1384.0.
+    """'7.74T' -> 7_740_000_000_000.0, '4.36M' -> 4_360_000.0, '1,384' -> 1384.0,
+    '1.05%' -> 1.05 (dividend_yield is stored as the raw percent number, not
+    divided by 100 — see mse_fundamentals schema comment).
 
     Returns None if s is empty/unparseable — many fields (Opening Price,
     Number of Deals) are frequently blank on the source page.
     """
     if not s:
         return None
-    s = s.strip().replace(",", "")
+    s = s.strip().replace(",", "").rstrip("%")
     m = re.match(r"^([+-]?\d+(?:\.\d+)?)([KMBT])?$", s)
     if not m:
         return None
@@ -300,12 +336,13 @@ def scrape_counter_details():
                 .execute()
             )
             if existing.data:
-                supabase.table("mse_prices").update(price_fields).eq(
-                    "id", existing.data[0]["id"]
-                ).execute()
+                db_update(
+                    "mse_prices", price_fields, existing.data[0]["id"],
+                    label=f"{symbol} {price_fields}",
+                )
             else:
                 price_fields.update({"counter_id": counter_id, "price_date": today})
-                supabase.table("mse_prices").insert(price_fields).execute()
+                db_insert("mse_prices", price_fields, label=f"{symbol} {price_fields}")
             print(f"{symbol}: updated today's row with {list(price_fields.keys())}")
             updated += 1
         else:
@@ -323,9 +360,13 @@ def scrape_counter_details():
 
         if fundamentals:
             fundamentals["counter_id"] = counter_id
-            supabase.table("mse_fundamentals").upsert(
-                fundamentals, on_conflict="counter_id"
-            ).execute()
+            db_upsert(
+                "mse_fundamentals", fundamentals, "counter_id",
+                label=f"{symbol} {fundamentals}",
+            )
+            print(f"{symbol}: upserted fundamentals with {[k for k in fundamentals if k != 'counter_id']}")
+        else:
+            print(f"{symbol}: no fundamentals fields parsed off {url}")
 
         # Gap-fill: backfill any of the last 10 trading days missing from
         # mse_prices, using the source's own recent-history table. This is
@@ -351,13 +392,14 @@ def scrape_counter_details():
                 except ValueError:
                     pass
 
-            supabase.table("mse_prices").insert({
+            gap_row = {
                 "counter_id": counter_id,
                 "price_date": row_date,
                 "price": float(row_close.replace(",", "")),
                 "change_pct": change_pct,
                 "volume": int(row_volume.replace(",", "")) if row_volume else None,
-            }).execute()
+            }
+            db_insert("mse_prices", gap_row, label=f"{symbol} gap-fill {row_date}")
             filled += 1
 
         if filled:
@@ -367,6 +409,18 @@ def scrape_counter_details():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Scrape MSE counters, indices, and per-counter detail pages.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Fetch and parse everything as normal, but don't write to Supabase — print what would have been written instead.",
+    )
+    args = parser.parse_args()
+    DRY_RUN = args.dry_run
+
+    if DRY_RUN:
+        print("=== DRY RUN — no writes will be made to Supabase ===\n")
+
     scrape_mse()
     scrape_indices()
     scrape_counter_details()

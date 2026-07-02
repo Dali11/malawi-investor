@@ -133,7 +133,7 @@ export default async function MarketOverviewPage() {
                     </p>
                 </div>
                 <Link
-                    href="/markets/stocks"
+                    href="/mse"
                     className="rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) px-3.5 py-1.5 text-[13px] font-medium text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary)"
                 >
                     View all stocks →
@@ -271,7 +271,7 @@ export default async function MarketOverviewPage() {
                 </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                     {[
-                        { label: 'Stocks', href: '/markets/stocks', desc: 'All 16 MSE counters' },
+                        { label: 'Stocks', href: '/mse', desc: 'All 16 MSE counters' },
                         { label: 'Bonds', href: '/markets/bonds', desc: 'T-bills & govt bonds' },
                         { label: 'Indices', href: '/markets/indices', desc: 'MASI & DSI charts' },
                         { label: 'Screener', href: '/markets/screeners', desc: 'Filter by P/E, cap, sector' },

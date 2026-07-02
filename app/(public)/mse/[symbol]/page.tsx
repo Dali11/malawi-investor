@@ -2,7 +2,7 @@
 // Individual counter detail page — price, key stats, trend chart and
 // that counter's corporate actions history (dividends, AGMs, rights
 // issues, splits, announcements) pulled from the `corporate_actions`
-// table. Linked to from /mse, /markets/stocks and corporate action rows.
+// table. Linked to from /mse and corporate action rows.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
