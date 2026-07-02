@@ -8,8 +8,6 @@
 import { useState } from 'react'
 import { Bell } from 'lucide-react'
 import { TrendChart } from '@/components/home/TrendChart'
-import { MarketStatCard } from '@/components/markets/MarketStatCard'
-import { BarChart3, TrendingUp, TrendingDown, Activity, Layers, Percent, Coins, PieChart } from 'lucide-react'
 
 type Action = {
     type: string
@@ -83,6 +81,42 @@ function EmptyState({ message }: { message: string }) {
     return (
         <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) px-4 py-8 text-center shadow-(--shadow-card)">
             <p className="text-[13px] text-(--color-text-tertiary)">{message}</p>
+        </div>
+    )
+}
+
+function StatRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+    return (
+        <div
+            className={`flex items-center justify-between py-2.5 ${last ? '' : 'border-b-[0.5px] border-(--color-border-tertiary)'}`}
+        >
+            <span className="text-[13px] text-(--color-text-secondary)">{label}</span>
+            <span className="text-[13px] font-medium text-(--color-text-primary) font-(family-name:--font-mono)">
+                {value}
+            </span>
+        </div>
+    )
+}
+
+function StatList({ stats }: { stats: { label: string; value: string }[] }) {
+    const mid = Math.ceil(stats.length / 2)
+    const left = stats.slice(0, mid)
+    const right = stats.slice(mid)
+
+    return (
+        <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) px-4 shadow-(--shadow-card) sm:px-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-8">
+                <div>
+                    {left.map((s, i) => (
+                        <StatRow key={s.label} label={s.label} value={s.value} last={i === left.length - 1} />
+                    ))}
+                </div>
+                <div>
+                    {right.map((s, i) => (
+                        <StatRow key={s.label} label={s.label} value={s.value} last={i === right.length - 1} />
+                    ))}
+                </div>
+            </div>
         </div>
     )
 }
@@ -185,11 +219,10 @@ export function CounterOverviewTabs({
                     <button
                         key={t.key}
                         onClick={() => setTab(t.key)}
-                        className={`shrink-0 border-b-2 px-3.5 py-2.5 text-[13px] whitespace-nowrap transition-colors ${
-                            tab === t.key
+                        className={`shrink-0 border-b-2 px-3.5 py-2.5 text-[13px] whitespace-nowrap transition-colors ${tab === t.key
                                 ? 'border-(--color-text-primary) font-medium text-(--color-text-primary)'
                                 : 'border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)'
-                        }`}
+                            }`}
                     >
                         {t.label}
                     </button>
@@ -206,19 +239,21 @@ export function CounterOverviewTabs({
                         <span>Day low <strong className="font-medium text-(--color-text-primary)">{formatPrice(overview.dayLow)}</strong></span>
                     </div>
 
-                    {/* Stat grid */}
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <MarketStatCard label="Volume" value={formatCompact(overview.volume)} icon={Activity} sentiment="neutral" />
-                        <MarketStatCard label="Shares traded 3mo" value={formatCompact(overview.sharesTraded3mo)} icon={Layers} sentiment="neutral" />
-                        <MarketStatCard label="P/E ratio" value={overview.peRatio != null ? overview.peRatio.toFixed(1) : '—'} icon={BarChart3} sentiment="neutral" />
-                        <MarketStatCard label="Market cap" value={overview.marketCap} icon={Coins} sentiment="neutral" />
-                        <MarketStatCard label="EPS" value={overview.eps != null ? overview.eps.toFixed(2) : '—'} icon={PieChart} sentiment="neutral" />
-                        <MarketStatCard label="Earnings yield" value={overview.earningsYield != null ? `${overview.earningsYield.toFixed(2)}%` : '—'} icon={Percent} sentiment="neutral" />
-                        <MarketStatCard label="Dividend yield" value={overview.dividendYield != null ? `${overview.dividendYield.toFixed(2)}%` : '—'} icon={Percent} sentiment="neutral" />
-                        <MarketStatCard label="Payout ratio" value={overview.payoutRatio != null ? `${overview.payoutRatio.toFixed(0)}%` : '—'} icon={Percent} sentiment="neutral" />
-                        <MarketStatCard label="52-wk high" value={formatPrice(overview.week52High)} icon={TrendingUp} sentiment="positive" />
-                        <MarketStatCard label="52-wk low" value={formatPrice(overview.week52Low)} icon={TrendingDown} sentiment="negative" />
-                    </div>
+                    {/* Stat list */}
+                    <StatList
+                        stats={[
+                            { label: 'Volume', value: formatCompact(overview.volume) },
+                            { label: 'Shares traded 3mo', value: formatCompact(overview.sharesTraded3mo) },
+                            { label: 'P/E ratio', value: overview.peRatio != null ? overview.peRatio.toFixed(1) : '—' },
+                            { label: 'Market cap', value: overview.marketCap },
+                            { label: 'EPS', value: overview.eps != null ? overview.eps.toFixed(2) : '—' },
+                            { label: 'Earnings yield', value: overview.earningsYield != null ? `${overview.earningsYield.toFixed(2)}%` : '—' },
+                            { label: 'Dividend yield', value: overview.dividendYield != null ? `${overview.dividendYield.toFixed(2)}%` : '—' },
+                            { label: 'Payout ratio', value: overview.payoutRatio != null ? `${overview.payoutRatio.toFixed(0)}%` : '—' },
+                            { label: '52-wk high', value: formatPrice(overview.week52High) },
+                            { label: '52-wk low', value: formatPrice(overview.week52Low) },
+                        ]}
+                    />
 
                     {/* Price + volume chart */}
                     <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) p-4 shadow-(--shadow-card)">
