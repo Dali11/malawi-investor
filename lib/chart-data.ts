@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 export type ChartPoint = {
     date: string
     value: number
+    volume?: number | null
 }
 
 export type RangeKey = '1D' | '5D' | '1M' | '6M' | 'YTD' | '1Y' | '5Y' | '10Y' | 'MAX'
@@ -64,20 +65,20 @@ export async function getCounterHistory(symbol: string, range: RangeKey): Promis
         const limit = range === '1D' ? 1 : 5
         const { data: prices } = await supabase
             .from('mse_prices')
-            .select('price_date, price')
+            .select('price_date, price, volume')
             .eq('counter_id', counter.id)
             .order('price_date', { ascending: false })
             .limit(limit)
 
         return (prices ?? [])
-            .map((p) => ({ date: p.price_date, value: Number(p.price) }))
+            .map((p) => ({ date: p.price_date, value: Number(p.price), volume: p.volume }))
             .reverse()
     }
 
     const startDate = startDateFor(range)
     let query = supabase
         .from('mse_prices')
-        .select('price_date, price')
+        .select('price_date, price, volume')
         .eq('counter_id', counter.id)
         .order('price_date', { ascending: true })
 
@@ -90,6 +91,7 @@ export async function getCounterHistory(symbol: string, range: RangeKey): Promis
     return (prices ?? []).map((p) => ({
         date: p.price_date,
         value: Number(p.price),
+        volume: p.volume,
     }))
 }
 

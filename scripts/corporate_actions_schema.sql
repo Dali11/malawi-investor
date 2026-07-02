@@ -12,7 +12,7 @@
 create table if not exists corporate_actions (
     id bigint generated always as identity primary key,
     counter_id bigint references mse_counters(id) on delete cascade,
-    type text not null check (type in ('Dividend', 'AGM', 'Rights Issue', 'Stock Split', 'Announcement')),
+    type text not null check (type in ('Dividend', 'AGM', 'Rights Issue', 'Stock Split', 'Announcement', 'Report')),
     headline text not null,
     details text,
     action_date date not null, -- ex-date / event date / announcement date depending on type

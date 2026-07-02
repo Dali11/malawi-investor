@@ -1,16 +1,24 @@
 // app/(public)/mse/[symbol]/page.tsx
-// Individual counter detail page — price, key stats, trend chart and
-// that counter's corporate actions history (dividends, AGMs, rights
-// issues, splits, announcements) pulled from the `corporate_actions`
-// table. Linked to from /mse and corporate action rows.
+// Individual counter detail page. Header (price/change) + a single tab
+// bar: Market overview (stats + price/volume chart), Announcements,
+// News, Reports, Dividends. See CounterOverviewTabs for the tab UI.
+//
+// Data notes:
+// - "Open" is frequently blank on the scrape source (afx.kwayisi.org
+//   often doesn't publish an opening price) — shows "—" when absent
+//   rather than guessing.
+// - P/BV, "Listed" year, founded date, ISIN, website, and IPO growth
+//   aren't in the database yet (no source currently provides them for
+//   most counters) — deliberately left out of this pass rather than
+//   shown as permanent placeholders. See the "About the company" card
+//   in the design mockup for what's still to come.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { ArrowLeft, TrendingUp, TrendingDown, BarChart3, Bell } from 'lucide-react'
-import { MarketStatCard } from '@/components/markets/MarketStatCard'
-import { TrendChart } from '@/components/home/TrendChart'
+import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react'
+import { CounterOverviewTabs } from '@/components/markets/CounterOverviewTabs'
 
 export const revalidate = 3600
 
@@ -35,14 +43,6 @@ function formatMarketCap(n: number | null) {
 
 function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString('en-MW', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-    Dividend: { bg: 'var(--color-background-success)', text: 'var(--color-text-success)' },
-    AGM: { bg: 'var(--color-background-info)', text: 'var(--color-text-info)' },
-    'Rights Issue': { bg: 'var(--color-background-warning)', text: 'var(--color-text-warning)' },
-    'Stock Split': { bg: 'var(--color-background-warning)', text: 'var(--color-text-warning)' },
-    Announcement: { bg: 'var(--color-background-secondary)', text: 'var(--color-text-secondary)' },
 }
 
 type Params = { symbol: string }
@@ -80,48 +80,89 @@ export default async function CounterPage({
 
     if (!counter) notFound()
 
-    // Latest price row
+    // Latest two price rows: [0] = today/most recent, [1] = previous
+    // close. Also carries the daily-changing fields the detail-page
+    // scraper writes (day_low/day_high/volume/market_cap/pe_ratio).
     const { data: priceRows } = await supabase
         .from('mse_prices')
-        .select('price, change_pct, market_cap, pe_ratio, price_date')
+        .select('price, change_pct, market_cap, pe_ratio, day_low, day_high, volume, price_date')
         .eq('counter_id', counter.id)
         .order('price_date', { ascending: false })
-        .limit(1)
+        .limit(2)
 
     const latest = priceRows?.[0]
+    const previous = priceRows?.[1]
 
-    // 52-week high/low
+    // Slow-changing fundamentals (EPS, DPS, dividend yield, shares
+    // outstanding) — overwritten in place by the scraper, one row per
+    // counter, not a daily history.
+    const { data: fundamentals } = await supabase
+        .from('mse_fundamentals')
+        .select('eps, dps, dividend_yield, shares_outstanding')
+        .eq('counter_id', counter.id)
+        .maybeSingle()
+
+    // 52-week high/low + shares traded over the last 3 months, both
+    // derived from the same 1-year price history pull.
     const oneYearAgo = new Date()
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
     const since = oneYearAgo.toISOString().slice(0, 10)
 
+    const threeMonthsAgo = new Date()
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+    const sinceThreeMonths = threeMonthsAgo.toISOString().slice(0, 10)
+
     const { data: history } = await supabase
         .from('mse_prices')
-        .select('price')
+        .select('price, volume, price_date')
         .eq('counter_id', counter.id)
         .gte('price_date', since)
 
     let week52High: number | null = null
     let week52Low: number | null = null
+    let sharesTraded3mo = 0
     for (const row of history ?? []) {
         const p = Number(row.price)
         if (week52High === null || p > week52High) week52High = p
         if (week52Low === null || p < week52Low) week52Low = p
+        if (row.price_date >= sinceThreeMonths && row.volume != null) {
+            sharesTraded3mo += Number(row.volume)
+        }
     }
 
-    // Corporate actions for this counter
+    // Corporate actions for this counter (Announcements/Reports/
+    // Dividends tabs all slice this same set client-side).
     const { data: rawActions } = await supabase
         .from('corporate_actions')
         .select('type, headline, details, action_date')
         .eq('counter_id', counter.id)
         .order('action_date', { ascending: false })
+        .limit(100)
+
+    const { data: rawNews } = await supabase
+        .from('news_items')
+        .select('headline, summary, source_name, source_url, published_at')
+        .eq('counter_id', counter.id)
+        .order('published_at', { ascending: false })
         .limit(50)
 
     const actions = rawActions ?? []
+    const newsItems = rawNews ?? []
 
     const changePct = latest?.change_pct != null ? Number(latest.change_pct) : null
     const isUp = (changePct ?? 0) > 0
     const isDown = (changePct ?? 0) < 0
+
+    const price = latest?.price != null ? Number(latest.price) : null
+    const eps = fundamentals?.eps != null ? Number(fundamentals.eps) : null
+    const dps = fundamentals?.dps != null ? Number(fundamentals.dps) : null
+    const dividendYield = fundamentals?.dividend_yield != null ? Number(fundamentals.dividend_yield) : null
+
+    // Earnings yield = EPS / price. Payout ratio = DPS / EPS. Both
+    // computed here rather than stored, so they always match whatever
+    // the latest price/fundamentals actually are.
+    const earningsYield = eps != null && price ? (eps / price) * 100 : null
+    const payoutRatio = eps && dps != null && eps !== 0 ? (dps / eps) * 100 : null
 
     return (
         <div className="space-y-6">
@@ -178,82 +219,27 @@ export default async function CounterPage({
                 )}
             </div>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <MarketStatCard
-                    label="P/E ratio"
-                    value={latest?.pe_ratio != null ? Number(latest.pe_ratio).toFixed(1) : '—'}
-                    icon={BarChart3}
-                    sentiment="neutral"
-                />
-                <MarketStatCard
-                    label="Market cap"
-                    value={formatMarketCap(latest?.market_cap != null ? Number(latest.market_cap) : null)}
-                    icon={BarChart3}
-                    sentiment="neutral"
-                />
-                <MarketStatCard
-                    label="52-wk high"
-                    value={week52High != null ? formatPrice(week52High) : '—'}
-                    icon={TrendingUp}
-                    sentiment="positive"
-                />
-                <MarketStatCard
-                    label="52-wk low"
-                    value={week52Low != null ? formatPrice(week52Low) : '—'}
-                    icon={TrendingDown}
-                    sentiment="negative"
-                />
-            </div>
-
-            {/* Chart */}
-            <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) p-4 shadow-(--shadow-card)">
-                <TrendChart symbol={counter.symbol} />
-            </div>
-
-            {/* Corporate actions for this counter */}
-            <div>
-                <div className="mb-2 flex items-center gap-2">
-                    <Bell size={14} className="text-(--color-text-tertiary)" aria-hidden="true" />
-                    <h2 className="text-[13px] font-bold tracking-wide text-(--color-text-tertiary) uppercase">
-                        Corporate actions
-                    </h2>
-                </div>
-
-                {actions.length === 0 ? (
-                    <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) px-4 py-8 text-center shadow-(--shadow-card)">
-                        <p className="text-[13px] text-(--color-text-tertiary)">
-                            No corporate actions recorded yet for {counter.symbol}.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-(--shadow-card)">
-                        {actions.map((a, i) => {
-                            const { bg, text } = TYPE_COLORS[a.type] ?? TYPE_COLORS.Announcement
-                            return (
-                                <div
-                                    key={i}
-                                    className={`flex items-start gap-3 px-4 py-3.5 ${i < actions.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
-                                >
-                                    <span
-                                        className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
-                                        style={{ background: bg, color: text }}
-                                    >
-                                        {a.type}
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[13px] text-(--color-text-primary) leading-snug">{a.headline}</p>
-                                        {a.details && (
-                                            <p className="mt-0.5 text-[12px] text-(--color-text-secondary) leading-snug">{a.details}</p>
-                                        )}
-                                        <p className="mt-1 text-[11px] text-(--color-text-tertiary)">{formatDate(a.action_date)}</p>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
-            </div>
+            <CounterOverviewTabs
+                symbol={counter.symbol}
+                overview={{
+                    open: null, // afx.kwayisi.org rarely publishes this — see file header note
+                    prevClose: previous?.price != null ? Number(previous.price) : null,
+                    dayHigh: latest?.day_high != null ? Number(latest.day_high) : null,
+                    dayLow: latest?.day_low != null ? Number(latest.day_low) : null,
+                    volume: latest?.volume != null ? Number(latest.volume) : null,
+                    sharesTraded3mo: sharesTraded3mo || null,
+                    peRatio: latest?.pe_ratio != null ? Number(latest.pe_ratio) : null,
+                    marketCap: formatMarketCap(latest?.market_cap != null ? Number(latest.market_cap) : null),
+                    eps,
+                    earningsYield,
+                    dividendYield,
+                    payoutRatio,
+                    week52High,
+                    week52Low,
+                }}
+                actions={actions}
+                newsItems={newsItems}
+            />
         </div>
     )
 }

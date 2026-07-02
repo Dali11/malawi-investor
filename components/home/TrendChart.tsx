@@ -1,12 +1,18 @@
 'use client'
 
 import { useState, useEffect, useId } from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { AreaChart, Area, Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import type { RangeKey } from '@/lib/chart-data'
 
 const RANGES: RangeKey[] = ['1D', '5D', '1M', '6M', 'YTD', '1Y', '5Y', '10Y', 'MAX']
 
-type ChartPoint = { date: string; value: number }
+type ChartPoint = { date: string; value: number; volume?: number | null }
+
+function formatVolumeTick(v: number) {
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+    if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`
+    return `${v}`
+}
 
 function formatTick(dateStr: string, range: RangeKey) {
     const d = new Date(dateStr)
@@ -19,7 +25,7 @@ function formatTick(dateStr: string, range: RangeKey) {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export function TrendChart({ symbol, indexCode, label, defaultRange }: { symbol?: string | null; indexCode?: string | null; label?: string; defaultRange?: RangeKey }) {
+export function TrendChart({ symbol, indexCode, label, defaultRange, showVolume }: { symbol?: string | null; indexCode?: string | null; label?: string; defaultRange?: RangeKey; showVolume?: boolean }) {
     const [range, setRange] = useState<RangeKey>(defaultRange ?? '5D')
     const [points, setPoints] = useState<ChartPoint[]>([])
     const [isComposite, setIsComposite] = useState(false)
@@ -216,6 +222,31 @@ export function TrendChart({ symbol, indexCode, label, defaultRange }: { symbol?
                     </ResponsiveContainer>
                 )}
             </div>
+
+            {showVolume && !isComposite && !isSynthetic && !loading && !error && points.some((p) => p.volume != null) && (
+                <div className="mt-1 h-[44px]">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                        <BarChart data={points} margin={{ top: 0, right: 4, bottom: 0, left: 0 }}>
+                            <XAxis dataKey="date" hide />
+                            <YAxis
+                                dataKey="volume"
+                                orientation="right"
+                                width={52}
+                                tickCount={2}
+                                tickFormatter={formatVolumeTick}
+                                tick={{ fontSize: 9, fill: 'var(--color-text-tertiary)' }}
+                                axisLine={false}
+                                tickLine={false}
+                            />
+                            <Tooltip
+                                formatter={(value) => [typeof value === 'number' ? value.toLocaleString('en') : '—', 'Volume']}
+                                labelFormatter={(d) => formatTick(String(d), range)}
+                            />
+                            <Bar dataKey="volume" fill="var(--color-text-tertiary)" opacity={0.5} radius={[1, 1, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
 
             {isComposite && (
                 <p className="mt-2 text-[10px] text-(--color-text-tertiary)">
