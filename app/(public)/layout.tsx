@@ -1,6 +1,7 @@
 // app/(public)/layout.tsx
 import '../globals.css'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import MobileNav from '@/components/home/MobileNav'
@@ -44,16 +45,13 @@ export default async function PublicLayout({
     return (
         <div className="public-shell">
             <header id="site-header" className="sticky top-0 z-50 border-b-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary)">
-                <div className="mx-auto flex max-w-[1100px] items-center justify-between gap-4 px-6 py-2.5">
-                    <div className="flex items-center gap-6">
-                        <Link href="/" className="flex items-center gap-2 text-[18px] font-semibold text-(--color-text-primary) no-underline">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M3 17l6-6 4 4 8-8" stroke="var(--color-brand)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M15 7h6v6" stroke="var(--color-brand)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            Malawi Investor
+                <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-2 py-3 sm:px-4 lg:px-6">
+                    <div className="flex items-center gap-10">
+                        <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[18px] font-semibold text-(--color-text-primary) no-underline">
+                            <Image src="/logo.png" alt="Malawi Investor" width={30} height={30} className="h-[30px] w-[30px] object-contain" priority />
+                            <span className="whitespace-nowrap">Malawi Investor</span>
                         </Link>
-                        <nav className="hidden items-center gap-6 text-[16px] text-(--color-text-secondary) md:flex">
+                        <nav className="hidden items-center gap-7 text-[16px] text-(--color-text-secondary) md:flex">
                             <MarketsDropdown />
                             {navLinks.filter(({ label }) => label !== 'Markets').map(({ label, href }) => (
                                 <Link key={href} href={href} className="no-underline transition-colors hover:text-(--color-text-primary)">
@@ -63,13 +61,13 @@ export default async function PublicLayout({
                         </nav>
                     </div>
 
-
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-1 items-center justify-end gap-3">
+                        <SearchBox />
                         <ThemeToggle />
                         {!user && (
                             <Link
                                 href="/login"
-                                className="rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) px-3 py-1.5 text-xs font-medium text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary)"
+                                className="rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) px-3.5 py-1.5 text-xs font-medium whitespace-nowrap text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary)"
                             >
                                 Sign in
                             </Link>
@@ -77,7 +75,7 @@ export default async function PublicLayout({
                         {!user && (
                             <Link
                                 href="/signup"
-                                className="rounded-(--border-radius-md) bg-(--color-brand) px-3 py-1.5 text-xs font-semibold text-[#062012] no-underline transition-colors hover:bg-(--color-brand-hover)"
+                                className="rounded-(--border-radius-md) bg-(--color-brand) px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#062012] no-underline transition-colors hover:bg-(--color-brand-hover)"
                             >
                                 Sign up
                             </Link>
@@ -86,8 +84,6 @@ export default async function PublicLayout({
                             {user && <AccountButton name={user.user_metadata?.full_name ?? user.email ?? ''} />}
                         </div>
                         <MobileNav navLinks={navLinks} user={!!user} />
-                        <SearchBox />
-
                     </div>
                 </div>
 
