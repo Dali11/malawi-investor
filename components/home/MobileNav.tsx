@@ -34,8 +34,12 @@ export default function MobileNav({
                     />
                     <div className="absolute top-0 right-0 h-full w-[78%] max-w-[300px] bg-(--color-background-primary) shadow-xl flex flex-col">
                         <div className="flex items-center justify-between px-5 py-4 border-b-[0.5px] border-(--color-border-tertiary)">
-                            <span className="text-[16px] font-medium text-(--color-text-primary)">
-                                <span className="text-(--color-text-warning)">Malawi</span> Investor
+                            <span className="flex items-center gap-2 text-[16px] font-semibold text-(--color-text-primary)">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M3 17l6-6 4 4 8-8" stroke="var(--color-brand)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M15 7h6v6" stroke="var(--color-brand)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                Malawi Investor
                             </span>
                             <button
                                 onClick={() => setOpen(false)}
@@ -115,7 +119,7 @@ export default function MobileNav({
                                 <Link
                                     href="/signup"
                                     onClick={() => setOpen(false)}
-                                    className="block rounded-(--border-radius-md) bg-[#ef9f27] px-4 py-2 text-center text-sm font-medium text-[#412402] no-underline"
+                                    className="block rounded-(--border-radius-md) bg-(--color-brand) px-4 py-2 text-center text-sm font-semibold text-[#062012] no-underline"
                                 >
                                     Join free
                                 </Link>

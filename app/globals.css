@@ -63,6 +63,77 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
+/* ------------------------------------------------------------------ */
+/* Public marketing site (home + nav) — light/dark theme              */
+/* Scoped to .public-shell so /admin, /account, /learn etc. are       */
+/* untouched. Which palette applies is driven by a class Next puts    */
+/* on <html> (theme-dark / theme-light) — see app/layout.tsx.         */
+/* .public-shell alone (no html class yet, e.g. no-JS) falls back to  */
+/* the dark palette, matching the brand's default look.               */
+/* ------------------------------------------------------------------ */
+.public-shell,
+html.theme-dark .public-shell {
+  --color-background-primary: #0b0f14;
+  --color-background-secondary: #12161d;
+  --color-background-tertiary: #171c24;
+  --color-background-info: #0f2436;
+  --color-background-success: #0f2417;
+  --color-background-warning: #2b2109;
+  --color-background-danger: #2a1212;
+
+  --color-text-primary: #f3f5f7;
+  --color-text-secondary: #9aa4b2;
+  --color-text-tertiary: #667085;
+  --color-text-info: #7ab8f5;
+  --color-text-success: #22c55e;
+  --color-text-warning: #f2b84b;
+  --color-text-danger: #f37272;
+
+  --color-border-tertiary: rgba(255, 255, 255, 0.08);
+  --color-border-secondary: rgba(255, 255, 255, 0.16);
+  --color-border-primary: rgba(255, 255, 255, 0.28);
+
+  --color-brand: #22c55e;
+  --color-brand-hover: #1ea34e;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+html.theme-light .public-shell {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f5f6f7;
+  --color-background-tertiary: #eef0f2;
+  --color-background-info: #e6f1fb;
+  --color-background-success: #e8f7ed;
+  --color-background-warning: #faeeda;
+  --color-background-danger: #fcebeb;
+
+  --color-text-primary: #14181f;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #9aa4b2;
+  --color-text-info: #185fa5;
+  --color-text-success: #158a42;
+  --color-text-warning: #854f0b;
+  --color-text-danger: #b3261e;
+
+  --color-border-tertiary: rgba(0, 0, 0, 0.1);
+  --color-border-secondary: rgba(0, 0, 0, 0.18);
+  --color-border-primary: rgba(0, 0, 0, 0.32);
+
+  --color-brand: #16a34a;
+  --color-brand-hover: #128a3e;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 8px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.07);
+}
+
+.public-shell {
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+}
+
 /* @keyframes ticker-scroll {
   0% {
     transform: translateX(0);

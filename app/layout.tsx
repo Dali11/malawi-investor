@@ -72,7 +72,21 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+          Runs before paint so the public site matches the visitor's
+          saved choice, or their OS/browser preference on first visit,
+          with no flash of the wrong theme. Only ever touches <html>'s
+          class — the actual colors live in .public-shell in globals.css,
+          so /admin, /account, /learn etc. are unaffected either way.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('mi-theme');if(t!=='theme-light'&&t!=='theme-dark'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'theme-light':'theme-dark'}document.documentElement.classList.add(t)}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   )

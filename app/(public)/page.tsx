@@ -2,6 +2,7 @@ import { CommunityPulse } from '@/components/home/CommunityPulse'
 import { CoursePreviews } from '@/components/home/CoursePreviews'
 import { FeaturedAnalysis } from '@/components/home/FeaturedAnalysis'
 import { GlossaryPreview } from '@/components/home/GlossaryPreview'
+import { Hero } from '@/components/home/Hero'
 import { JoinCta } from '@/components/home/JoinCta'
 import { LatestAnalysis } from '@/components/home/LatestAnalysis'
 import { MarketMovers } from '@/components/home/MarketMovers'
@@ -62,8 +63,20 @@ export default async function HomePage() {
     .order('order_index', { ascending: true })
     .limit(3)
 
+  // Real platform stats for the Hero (no placeholder numbers)
+  const [{ count: listedCount }, { count: articleCount }, { count: lessonCount }] = await Promise.all([
+    supabase.from('mse_counters').select('*', { count: 'exact', head: true }),
+    supabase.from('analyses').select('*', { count: 'exact', head: true }).eq('published', true),
+    supabase.from('courses').select('*', { count: 'exact', head: true }).eq('published', true),
+  ])
+
   return (
     <div className="space-y-8">
+      <Hero
+        listedCount={listedCount ?? 0}
+        articleCount={articleCount ?? 0}
+        lessonCount={lessonCount ?? 0}
+      />
       <div className="grid grid-cols-1 gap-6 border-b-[0.5px] border-(--color-border-tertiary) pb-6 lg:grid-cols-[1.3fr_1fr]">
         {featured && <FeaturedAnalysis analysis={featured} secondStory={secondStory} related={latest} />}
         <MarketSnapshot movers={snapshot} />
