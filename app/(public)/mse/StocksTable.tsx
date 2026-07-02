@@ -85,7 +85,7 @@ const COLUMNS: ColDef[] = [
     { key: 'sector', label: 'Sector', align: 'left', hide: 'lg' },
     { key: 'price', label: 'Price (MK)', align: 'right' },
     { key: 'change_pct', label: 'Change %', align: 'right' },
-    { key: 'volume', label: 'Volume', align: 'right', hide: 'sm' },
+    { key: 'volume', label: 'Volume', align: 'right' },
     { key: 'pe_ratio', label: 'P/E', align: 'right', hide: 'md' },
     { key: 'market_cap', label: 'Mkt Cap', align: 'right', hide: 'md' },
     { key: 'week52_high', label: '52-wk Range', align: 'right', hide: 'lg' },
@@ -247,7 +247,7 @@ export function StocksTable({ stocks }: { stocks: StockRow[] }) {
                                         </td>
 
                                         {/* Volume */}
-                                        <td className="hidden sm:table-cell px-3 py-3 text-right text-[13px] text-(--color-text-secondary) font-(family-name:--font-mono)">
+                                        <td className="px-3 py-3 text-right text-[13px] text-(--color-text-secondary) font-(family-name:--font-mono)">
                                             {formatVolume(s.volume)}
                                         </td>
 

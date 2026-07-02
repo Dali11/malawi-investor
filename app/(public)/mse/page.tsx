@@ -85,9 +85,6 @@ export default async function MSEPage() {
         })
         : null
 
-    const gainers = stocks.filter(s => (s.change_pct ?? 0) > 0).length
-    const losers = stocks.filter(s => (s.change_pct ?? 0) < 0).length
-
     return (
         <div className="space-y-4">
             {/* Header */}
@@ -99,22 +96,6 @@ export default async function MSEPage() {
                     All {stocks.length} counters listed on the MSE
                     {lastUpdated && <> · Prices as of {lastUpdated}</>}
                 </p>
-            </div>
-
-            {/* Breadth pills */}
-            <div className="flex flex-wrap gap-2">
-                <span className="rounded-full px-3 py-1 text-[12px] font-medium"
-                    style={{ background: 'var(--color-background-success)', color: 'var(--color-text-success)' }}>
-                    ▲ {gainers} advancing
-                </span>
-                <span className="rounded-full px-3 py-1 text-[12px] font-medium"
-                    style={{ background: 'var(--color-background-danger)', color: 'var(--color-text-danger)' }}>
-                    ▼ {losers} declining
-                </span>
-                <span className="rounded-full px-3 py-1 text-[12px] font-medium"
-                    style={{ background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)' }}>
-                    — {stocks.length - gainers - losers} unchanged
-                </span>
             </div>
 
             {/* Sortable table */}
