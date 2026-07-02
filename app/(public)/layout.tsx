@@ -48,7 +48,7 @@ export default async function PublicLayout({
                 <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-2 py-3 sm:px-4 lg:px-6">
                     <div className="flex items-center gap-10">
                         <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[18px] font-semibold text-(--color-text-primary) no-underline">
-                            <Image src="/logo.png" alt="Malawi Investor" width={30} height={30} className="h-[30px] w-[30px] object-contain" priority />
+                            <Image src="/logo.png" alt="Malawi Investor" width={30} height={30} className="h-[40px] w-[40px] object-contain" priority />
                             <span className="whitespace-nowrap">Malawi Investor</span>
                         </Link>
                         <nav className="hidden items-center gap-7 text-[16px] text-(--color-text-secondary) md:flex">
@@ -61,13 +61,13 @@ export default async function PublicLayout({
                         </nav>
                     </div>
 
-                    <div className="flex flex-1 items-center justify-end gap-3">
+                    <div className="flex items-center gap-3">
                         <SearchBox />
                         <ThemeToggle />
                         {!user && (
                             <Link
                                 href="/login"
-                                className="rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) px-3.5 py-1.5 text-xs font-medium whitespace-nowrap text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary)"
+                                className="hidden rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) px-3.5 py-1.5 text-xs font-medium whitespace-nowrap text-(--color-text-primary) no-underline transition-colors hover:bg-(--color-background-secondary) md:inline-flex"
                             >
                                 Sign in
                             </Link>
@@ -75,15 +75,15 @@ export default async function PublicLayout({
                         {!user && (
                             <Link
                                 href="/signup"
-                                className="rounded-(--border-radius-md) bg-(--color-brand) px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#062012] no-underline transition-colors hover:bg-(--color-brand-hover)"
+                                className="hidden rounded-(--border-radius-md) bg-(--color-brand) px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap text-[#062012] no-underline transition-colors hover:bg-(--color-brand-hover) md:inline-flex"
                             >
                                 Sign up
                             </Link>
                         )}
-                        <div>
+                        <div className="hidden md:block">
                             {user && <AccountButton name={user.user_metadata?.full_name ?? user.email ?? ''} />}
                         </div>
-                        <MobileNav navLinks={navLinks} user={!!user} />
+                        <MobileNav navLinks={navLinks} user={!!user} userName={user?.user_metadata?.full_name ?? user?.email ?? ''} />
                     </div>
                 </div>
 
