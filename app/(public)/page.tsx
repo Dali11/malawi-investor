@@ -1,5 +1,5 @@
 import { CommunityPulse } from '@/components/home/CommunityPulse'
-import { CoursePreviews } from '@/components/home/CoursePreviews'
+import { LearnInvestingPreview } from '@/components/home/LearnInvestingPreview'
 import { GlossaryPreview } from '@/components/home/GlossaryPreview'
 import { Hero } from '@/components/home/Hero'
 import { JoinCta } from '@/components/home/JoinCta'
@@ -95,13 +95,12 @@ export default async function HomePage() {
     .order('created_at', { ascending: false })
     .limit(6)
 
-  // Course previews
-  const { data: courses } = await supabase
-    .from('courses')
-    .select('id, title, level, order_index')
-    .eq('published', true)
+  // Learn Investing preview — first 5 modules from the real /learn path
+  const { data: modules } = await supabase
+    .from('modules')
+    .select('id, slug, title, description')
     .order('order_index', { ascending: true })
-    .limit(3)
+    .limit(5)
 
   return (
     <div className="space-y-8">
@@ -120,7 +119,7 @@ export default async function HomePage() {
       </div>
       <CommunityPulse threads={threads ?? []} />
       {/* <GlossaryPreview items={glossary ?? []} /> */}
-      <CoursePreviews courses={courses ?? []} />
+      <LearnInvestingPreview modules={modules ?? []} />
       <JoinCta />
     </div>
   )
