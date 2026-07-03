@@ -94,9 +94,9 @@ export function Hero({ marketStatus, indices }: HeroProps) {
                         priority
                     />
                     {indices.length > 0 && (
-                        <div className="absolute bottom-3 left-3 flex gap-2 rounded-(--border-radius-md) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary)/95 px-2.5 py-2 shadow-(--shadow-card)">
+                        <div className="absolute bottom-3 left-8 right-6 flex justify-between gap-2 rounded-(--border-radius-md) border-[0.5px] border-white/20 bg-black/35 px-3 py-2 backdrop-blur-sm">
                             {indices.map((idx) => (
-                                <IndexChip key={idx.code} {...idx} size="sm" />
+                                <IndexChip key={idx.code} {...idx} size="lg" />
                             ))}
                         </div>
                     )}
@@ -132,14 +132,14 @@ function IndexChip({ code, value, dayChangePct, size = 'sm' }: IndexSnapshot & {
 
     return (
         <div className={isLg ? 'flex-1 px-2 py-0.5 text-left' : 'px-1 text-left'}>
-            <p className={isLg ? 'text-[12px] font-semibold text-white' : 'text-[10px] font-semibold text-(--color-text-primary)'}>
+            <p className={isLg ? 'text-[12px] font-bold text-white' : 'text-[10px] font-semibold text-(--color-text-primary)'}>
                 {code}
             </p>
-            <p className={isLg ? 'text-[14px] font-medium text-white/90' : 'text-[11px] font-medium text-(--color-text-secondary)'}>
+            <p className={isLg ? 'text-[15px] font-bold text-white' : 'text-[11px] font-medium text-(--color-text-secondary)'}>
                 {value !== null ? value.toLocaleString('en', { maximumFractionDigits: 0 }) : '—'}
             </p>
             {dayChangePct !== null && (
-                <span className={isLg ? 'flex items-center gap-1 text-[12px] font-medium' : 'flex items-center gap-0.5 text-[10px] font-medium'} style={{ color }}>
+                <span className={isLg ? 'flex items-center gap-1 text-[12px] font-semibold' : 'flex items-center gap-0.5 text-[10px] font-medium'} style={{ color }}>
                     <Icon size={isLg ? 11 : 9} aria-hidden="true" />
                     {isUp ? '+' : ''}{dayChangePct.toFixed(2)}%
                 </span>
