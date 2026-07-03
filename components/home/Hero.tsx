@@ -16,24 +16,59 @@ type HeroProps = {
 
 export function Hero({ marketStatus, indices }: HeroProps) {
     return (
-        <section className="rounded-(--border-radius-xl) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-secondary)">
-            <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:gap-8 lg:p-7">
-                {/* Copy */}
-                <div className="flex-1">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border-[0.5px] border-(--color-border-secondary) bg-(--color-background-tertiary) px-3 py-1 text-[11px] font-medium text-(--color-text-secondary)">
-                        <span
-                            className="h-1.5 w-1.5 rounded-full"
-                            style={{ background: marketStatus.isOpen ? 'var(--color-text-success)' : 'var(--color-text-tertiary)' }}
-                        />
-                        {marketStatus.label}
-                    </span>
-
-                    <h1 className="mt-3 text-[22px] leading-[1.25] font-semibold tracking-tight text-(--color-text-primary) sm:text-[26px]">
+        <section className="overflow-hidden rounded-(--border-radius-xl) border-[0.5px] border-(--color-border-tertiary)">
+            {/* Mobile: photo is the full hero background, text + index row overlaid on a dark scrim */}
+            <div className="relative sm:hidden">
+                <div className="absolute inset-0">
+                    <Image
+                        src="/mwi_banner.png"
+                        alt=""
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                        priority
+                    />
+                    <div className="absolute inset-0 bg-black/60" />
+                </div>
+                <div className="relative z-10 flex flex-col gap-4 p-5">
+                    <StatusBadge marketStatus={marketStatus} />
+                    <h1 className="text-[22px] leading-[1.25] font-semibold tracking-tight text-white">
                         Invest with knowledge. Grow with{' '}
                         <span className="text-(--color-brand)">confidence.</span>
                     </h1>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        <Link
+                            href="/markets"
+                            className="rounded-(--border-radius-md) bg-(--color-brand) px-4 py-2 text-[13px] font-semibold text-[#062012] no-underline transition-colors hover:bg-(--color-brand-hover)"
+                        >
+                            Explore Markets
+                        </Link>
+                        <Link
+                            href="/learn"
+                            className="rounded-(--border-radius-md) border-[0.5px] border-white/40 px-4 py-2 text-[13px] font-medium text-white no-underline transition-colors hover:bg-white/10"
+                        >
+                            Learn Investing
+                        </Link>
+                    </div>
+                    {indices.length > 0 && (
+                        <div className="mt-1 flex gap-2 rounded-(--border-radius-md) border-[0.5px] border-white/15 bg-black/40 p-2.5">
+                            {indices.map((idx) => (
+                                <IndexChip key={idx.code} {...idx} size="lg" />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
 
-                    <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            {/* Tablet/desktop: side-by-side, photo takes ~55-60% of the width */}
+            <div className="hidden bg-(--color-background-secondary) sm:flex sm:items-stretch">
+                <div className="flex w-[42%] shrink-0 flex-col justify-center gap-4 p-6 lg:w-[38%] lg:p-8">
+                    <StatusBadge marketStatus={marketStatus} />
+                    <h1 className="text-[22px] leading-[1.25] font-semibold tracking-tight text-(--color-text-primary) lg:text-[26px]">
+                        Invest with knowledge. Grow with{' '}
+                        <span className="text-(--color-brand)">confidence.</span>
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-2.5">
                         <Link
                             href="/markets"
                             className="rounded-(--border-radius-md) bg-(--color-brand) px-4 py-2 text-[13px] font-semibold text-[#062012] no-underline transition-colors hover:bg-(--color-brand-hover)"
@@ -49,20 +84,19 @@ export function Hero({ marketStatus, indices }: HeroProps) {
                     </div>
                 </div>
 
-                {/* Signature visual: mse.png with the live index card overlapping its corner */}
-                <div className="relative hidden aspect-[16/10] w-[260px] shrink-0 sm:block">
+                <div className="relative w-[58%] lg:w-[62%]">
                     <Image
-                        src="/mse.png"
-                        alt="Malawi Stock Exchange"
+                        src="/mwi_banner.png"
+                        alt="Blantyre skyline at dusk"
                         fill
-                        sizes="260px"
-                        className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) object-cover"
+                        sizes="(min-width: 1024px) 62vw, 58vw"
+                        className="object-cover"
                         priority
                     />
                     {indices.length > 0 && (
-                        <div className="absolute -bottom-4 left-3 flex gap-2 rounded-(--border-radius-md) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) px-2.5 py-2 shadow-(--shadow-card)">
+                        <div className="absolute bottom-3 left-3 flex gap-2 rounded-(--border-radius-md) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary)/95 px-2.5 py-2 shadow-(--shadow-card)">
                             {indices.map((idx) => (
-                                <IndexChip key={idx.code} {...idx} />
+                                <IndexChip key={idx.code} {...idx} size="sm" />
                             ))}
                         </div>
                     )}
@@ -72,7 +106,19 @@ export function Hero({ marketStatus, indices }: HeroProps) {
     )
 }
 
-function IndexChip({ code, value, dayChangePct }: IndexSnapshot) {
+function StatusBadge({ marketStatus }: { marketStatus: MarketStatus }) {
+    return (
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border-[0.5px] border-(--color-border-secondary) bg-(--color-background-tertiary) px-3 py-1 text-[11px] font-medium text-(--color-text-secondary)">
+            <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: marketStatus.isOpen ? 'var(--color-text-success)' : 'var(--color-text-tertiary)' }}
+            />
+            {marketStatus.label}
+        </span>
+    )
+}
+
+function IndexChip({ code, value, dayChangePct, size = 'sm' }: IndexSnapshot & { size?: 'sm' | 'lg' }) {
     const isFlat = dayChangePct === null || dayChangePct === 0
     const isUp = !isFlat && dayChangePct! > 0
     const Icon = isFlat ? Minus : isUp ? TrendingUp : TrendingDown
@@ -82,15 +128,19 @@ function IndexChip({ code, value, dayChangePct }: IndexSnapshot) {
             ? 'var(--color-text-success)'
             : 'var(--color-text-danger)'
 
+    const isLg = size === 'lg'
+
     return (
-        <div className="px-1 text-left">
-            <p className="text-[10px] font-semibold text-(--color-text-primary)">{code}</p>
-            <p className="text-[11px] font-medium text-(--color-text-secondary)">
+        <div className={isLg ? 'flex-1 px-2 py-0.5 text-left' : 'px-1 text-left'}>
+            <p className={isLg ? 'text-[12px] font-semibold text-white' : 'text-[10px] font-semibold text-(--color-text-primary)'}>
+                {code}
+            </p>
+            <p className={isLg ? 'text-[14px] font-medium text-white/90' : 'text-[11px] font-medium text-(--color-text-secondary)'}>
                 {value !== null ? value.toLocaleString('en', { maximumFractionDigits: 0 }) : '—'}
             </p>
             {dayChangePct !== null && (
-                <span className="flex items-center gap-0.5 text-[10px] font-medium" style={{ color }}>
-                    <Icon size={9} aria-hidden="true" />
+                <span className={isLg ? 'flex items-center gap-1 text-[12px] font-medium' : 'flex items-center gap-0.5 text-[10px] font-medium'} style={{ color }}>
+                    <Icon size={isLg ? 11 : 9} aria-hidden="true" />
                     {isUp ? '+' : ''}{dayChangePct.toFixed(2)}%
                 </span>
             )}
