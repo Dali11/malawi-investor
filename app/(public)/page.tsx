@@ -8,7 +8,9 @@ import { LatestAnalysis } from '@/components/home/LatestAnalysis'
 import { MarketMovers } from '@/components/home/MarketMovers'
 import { MarketSnapshot } from '@/components/home/MarketSnapshot'
 import { createClient } from '@/lib/supabase/server'
+import { getMseMarketStatus } from '@/lib/market-status'
 import { getSymbol, PriceMover } from '@/types/home'
+import type { MseIndex } from '@/types/database'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export default async function HomePage() {
@@ -18,6 +20,29 @@ export default async function HomePage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Latest MASI/MDSI/MFSI snapshot — only fetched/shown for logged-out
+  // visitors, since the Hero (and this data) is acquisition-only content.
+  let heroIndices: { code: string; value: number | null; dayChangePct: number | null }[] = []
+  if (!user) {
+    const { data: indexRows } = await supabase
+      .from('mse_indices')
+      .select('index_code, value, day_change_pct, index_date')
+      .in('index_code', ['MASI', 'MDSI', 'MFSI'])
+      .order('index_date', { ascending: false })
+      .limit(30)
+
+    const latestByCode = new Map<string, MseIndex>()
+    for (const row of (indexRows ?? []) as MseIndex[]) {
+      if (!latestByCode.has(row.index_code)) latestByCode.set(row.index_code, row)
+    }
+    heroIndices = ['MASI', 'MDSI', 'MFSI']
+      .map((code) => latestByCode.get(code))
+      .filter((row): row is MseIndex => !!row)
+      .map((row) => ({ code: row.index_code, value: row.value, dayChangePct: row.day_change_pct }))
+  }
 
   // Featured + latest analyses
   const { data: analyses } = await supabase
@@ -63,20 +88,9 @@ export default async function HomePage() {
     .order('order_index', { ascending: true })
     .limit(3)
 
-  // Real platform stats for the Hero (no placeholder numbers)
-  const [{ count: listedCount }, { count: articleCount }, { count: lessonCount }] = await Promise.all([
-    supabase.from('mse_counters').select('*', { count: 'exact', head: true }),
-    supabase.from('analyses').select('*', { count: 'exact', head: true }).eq('published', true),
-    supabase.from('courses').select('*', { count: 'exact', head: true }).eq('published', true),
-  ])
-
   return (
     <div className="space-y-8">
-      <Hero
-        listedCount={listedCount ?? 0}
-        articleCount={articleCount ?? 0}
-        lessonCount={lessonCount ?? 0}
-      />
+      {!user && <Hero marketStatus={getMseMarketStatus()} indices={heroIndices} />}
       <div className="grid grid-cols-1 gap-6 border-b-[0.5px] border-(--color-border-tertiary) pb-6 lg:grid-cols-[1.3fr_1fr]">
         {featured && <FeaturedAnalysis analysis={featured} secondStory={secondStory} related={latest} />}
         <MarketSnapshot movers={snapshot} />
