@@ -15,7 +15,7 @@
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type DragEvent } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { RichTextEditor } from '@/components/admin/RichTextEditor'
@@ -48,7 +48,10 @@ export default function AnalysisAdminPage() {
     const [counterId, setCounterId] = useState('')
     const [category, setCategory] = useState<AnalysisCategory>('latest')
     const [content, setContent] = useState(EMPTY_CONTENT)
-    const [imageUrl, setImageUrl] = useState('')
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null)
+    const [dragActive, setDragActive] = useState(false)
     const [priceAtPost, setPriceAtPost] = useState('')
     const [peAtPost, setPeAtPost] = useState('')
     const [marketCapAtPost, setMarketCapAtPost] = useState('')
@@ -56,6 +59,7 @@ export default function AnalysisAdminPage() {
 
     const [loading, setLoading] = useState(false)
     const [fetchingSnapshot, setFetchingSnapshot] = useState(false)
+    const [uploadingImage, setUploadingImage] = useState(false)
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -83,11 +87,37 @@ export default function AnalysisAdminPage() {
         setCounterId('')
         setCategory('latest')
         setContent(EMPTY_CONTENT)
-        setImageUrl('')
+        handleImageSelect(null)
+        setExistingImageUrl(null)
         setPriceAtPost('')
         setPeAtPost('')
         setMarketCapAtPost('')
         setPublished(false)
+    }
+
+    function handleImageSelect(file: File | null) {
+        setImageFile(file)
+        setImagePreview(file ? URL.createObjectURL(file) : null)
+        if (file) setExistingImageUrl(null)
+    }
+
+    function handleDrop(e: DragEvent<HTMLLabelElement>) {
+        e.preventDefault()
+        setDragActive(false)
+        const file = e.dataTransfer.files?.[0]
+        if (file && file.type.startsWith('image/')) handleImageSelect(file)
+    }
+
+    async function uploadImage(): Promise<string | null> {
+        if (!imageFile) return null
+        const ext = imageFile.name.split('.').pop()
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const { error: uploadError } = await supabase.storage
+            .from('analysis-images')
+            .upload(path, imageFile, { cacheControl: '3600', upsert: false })
+        if (uploadError) throw uploadError
+        const { data } = supabase.storage.from('analysis-images').getPublicUrl(path)
+        return data.publicUrl
     }
 
     // Pulls the counter's latest known price/P-E/market cap from
@@ -139,7 +169,8 @@ export default function AnalysisAdminPage() {
         setCounterId(data.counter_id != null ? String(data.counter_id) : '')
         setCategory((data.category as AnalysisCategory) ?? 'latest')
         setContent(data.content || EMPTY_CONTENT)
-        setImageUrl(data.image_url ?? '')
+        handleImageSelect(null)
+        setExistingImageUrl(data.image_url ?? null)
         setPriceAtPost(data.price_at_post != null ? String(data.price_at_post) : '')
         setPeAtPost(data.pe_at_post != null ? String(data.pe_at_post) : '')
         setMarketCapAtPost(data.market_cap_at_post != null ? String(data.market_cap_at_post) : '')
@@ -155,12 +186,18 @@ export default function AnalysisAdminPage() {
         }
         setLoading(true); setError(null); setSuccess(false)
         try {
+            let imageUrl: string | null = existingImageUrl
+            if (imageFile) {
+                setUploadingImage(true)
+                imageUrl = await uploadImage()
+                setUploadingImage(false)
+            }
             const payload = {
                 title: title.trim(),
                 counter_id: counterId ? parseInt(counterId) : null,
                 category,
                 content,
-                image_url: imageUrl.trim() || null,
+                image_url: imageUrl,
                 price_at_post: priceAtPost ? parseFloat(priceAtPost) : null,
                 pe_at_post: peAtPost ? parseFloat(peAtPost) : null,
                 market_cap_at_post: marketCapAtPost ? parseFloat(marketCapAtPost) : null,
@@ -179,6 +216,7 @@ export default function AnalysisAdminPage() {
             setError(e.message ?? 'Failed to save')
         } finally {
             setLoading(false)
+            setUploadingImage(false)
         }
     }
 
@@ -277,18 +315,49 @@ export default function AnalysisAdminPage() {
                     <RichTextEditor content={content} onChange={setContent} />
                 </div>
 
-                {/* Image URL */}
+                {/* Cover image */}
                 <div>
                     <label className="mb-1 block text-[12px] font-medium text-gray-600">
-                        Cover image URL <span className="text-gray-400">(optional)</span>
+                        Cover image <span className="text-gray-400">(optional)</span>
                     </label>
-                    <input
-                        type="url"
-                        value={imageUrl}
-                        onChange={e => setImageUrl(e.target.value)}
-                        placeholder="https://…"
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-amber-400"
-                    />
+                    {imagePreview || existingImageUrl ? (
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={imagePreview ?? existingImageUrl ?? ''}
+                                alt=""
+                                className="h-20 w-20 rounded-lg object-cover"
+                            />
+                            <div className="flex flex-col items-start gap-1">
+                                {imageFile && <span className="text-[11px] text-gray-500">{imageFile.name}</span>}
+                                <button
+                                    type="button"
+                                    onClick={() => { handleImageSelect(null); setExistingImageUrl(null) }}
+                                    className="cursor-pointer border-none bg-transparent text-[12px] text-gray-500 hover:text-red-600"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <label
+                            onDragOver={e => { e.preventDefault(); setDragActive(true) }}
+                            onDragLeave={() => setDragActive(false)}
+                            onDrop={handleDrop}
+                            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-3 py-6 text-center transition-colors ${dragActive ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                                }`}
+                        >
+                            <span className="text-[12px] font-medium text-gray-600">
+                                Drag & drop a photo, or click to choose
+                            </span>
+                            <span className="text-[11px] text-gray-400">PNG or JPG</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={e => handleImageSelect(e.target.files?.[0] ?? null)}
+                                className="hidden"
+                            />
+                        </label>
+                    )}
                 </div>
 
                 {/* Snapshot stats */}
@@ -362,7 +431,9 @@ export default function AnalysisAdminPage() {
                         disabled={loading}
                         className="cursor-pointer rounded-lg border-none bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
                     >
-                        {loading ? 'Saving…' : editingId ? 'Update analysis' : published ? 'Publish analysis' : 'Save draft'}
+                        {loading
+                            ? (uploadingImage ? 'Uploading photo…' : 'Saving…')
+                            : editingId ? 'Update analysis' : published ? 'Publish analysis' : 'Save draft'}
                     </button>
                     {editingId && (
                         <button
