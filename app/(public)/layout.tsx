@@ -8,6 +8,7 @@ import MobileNav from '@/components/home/MobileNav'
 import MarketsDropdown from '@/components/home/MarketsDropdown'
 import SearchBox from '@/components/home/SearchBox'
 import ThemeToggle from '@/components/home/ThemeToggle'
+import { Footer } from '@/components/home/Footer'
 import AccountButton from '../account/AccountButton'
 
 export default async function PublicLayout({
@@ -133,6 +134,8 @@ export default async function PublicLayout({
             <main className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-6 py-6">
                 {children}
             </main>
+
+            <Footer />
         </div>
     )
 }
