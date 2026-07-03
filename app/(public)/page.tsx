@@ -27,7 +27,7 @@ export default async function HomePage() {
   // visitors, since the Hero (and this data) is acquisition-only content.
   let heroIndices: { code: string; value: number | null; dayChangePct: number | null }[] = []
   if (!user) {
-    const { data: indexRows } = await supabase
+    const { data: indexRows } = await serviceSupabase
       .from('mse_indices')
       .select('index_code, value, day_change_pct, index_date')
       .in('index_code', ['MASI', 'MDSI', 'MFSI'])
