@@ -13,6 +13,7 @@ export type NewsItemRow = {
     source_name: string | null
     source_url: string | null
     published_at: string
+    image_url: string | null
 }
 
 function formatDate(iso: string) {
@@ -54,6 +55,13 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                             key={n.id}
                             className={`flex items-start gap-3 px-4 py-3.5 ${i < filtered.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
                         >
+                            {n.image_url && (
+                                <img
+                                    src={n.image_url}
+                                    alt=""
+                                    className="h-14 w-14 shrink-0 rounded-(--border-radius-md) object-cover"
+                                />
+                            )}
                             <div className="min-w-0 flex-1">
                                 <p className="text-[13px] font-medium text-(--color-text-primary) leading-snug">
                                     {n.source_url ? (

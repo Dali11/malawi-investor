@@ -17,6 +17,9 @@ export default function NewsAdminPage() {
     const [sourceName, setSourceName] = useState('')
     const [sourceUrl, setSourceUrl] = useState('')
     const [publishedAt, setPublishedAt] = useState(() => new Date().toISOString().slice(0, 10))
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [uploadingImage, setUploadingImage] = useState(false)
 
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
@@ -27,7 +30,7 @@ export default function NewsAdminPage() {
     function loadRecent() {
         supabase
             .from('news_items')
-            .select('id, headline, source_name, published_at, mse_counters(symbol)')
+            .select('id, headline, source_name, published_at, image_url, mse_counters(symbol)')
             .order('created_at', { ascending: false })
             .limit(15)
             .then(({ data }) => { if (data) setRecent(data) })
@@ -40,6 +43,11 @@ export default function NewsAdminPage() {
         loadRecent()
     }, [])
 
+    function handleImageSelect(file: File | null) {
+        setImageFile(file)
+        setImagePreview(file ? URL.createObjectURL(file) : null)
+    }
+
     function resetForm() {
         setCounterId('')
         setHeadline('')
@@ -47,6 +55,19 @@ export default function NewsAdminPage() {
         setSourceName('')
         setSourceUrl('')
         setPublishedAt(new Date().toISOString().slice(0, 10))
+        handleImageSelect(null)
+    }
+
+    async function uploadImage(): Promise<string | null> {
+        if (!imageFile) return null
+        const ext = imageFile.name.split('.').pop()
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const { error: uploadError } = await supabase.storage
+            .from('news-images')
+            .upload(path, imageFile, { cacheControl: '3600', upsert: false })
+        if (uploadError) throw uploadError
+        const { data } = supabase.storage.from('news-images').getPublicUrl(path)
+        return data.publicUrl
     }
 
     async function handleSubmit() {
@@ -56,6 +77,12 @@ export default function NewsAdminPage() {
         }
         setLoading(true); setError(null); setSuccess(false)
         try {
+            let imageUrl: string | null = null
+            if (imageFile) {
+                setUploadingImage(true)
+                imageUrl = await uploadImage()
+                setUploadingImage(false)
+            }
             const { error: insertError } = await supabase.from('news_items').insert({
                 counter_id: counterId ? parseInt(counterId) : null,
                 headline: headline.trim(),
@@ -63,6 +90,7 @@ export default function NewsAdminPage() {
                 source_name: sourceName.trim() || null,
                 source_url: sourceUrl.trim() || null,
                 published_at: publishedAt,
+                image_url: imageUrl,
             })
             if (insertError) throw insertError
             setSuccess(true)
@@ -72,6 +100,7 @@ export default function NewsAdminPage() {
             setError(e.message ?? 'Failed to save')
         } finally {
             setLoading(false)
+            setUploadingImage(false)
         }
     }
 
@@ -98,6 +127,32 @@ export default function NewsAdminPage() {
                         placeholder="e.g. NBM declares interim dividend of MK 4.50 per share"
                         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-amber-400"
                     />
+                </div>
+
+                {/* Image */}
+                <div>
+                    <label className="mb-1 block text-[12px] font-medium text-gray-600">
+                        Photo <span className="text-gray-400">(optional)</span>
+                    </label>
+                    {imagePreview ? (
+                        <div className="flex items-center gap-3">
+                            <img src={imagePreview} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                            <button
+                                type="button"
+                                onClick={() => handleImageSelect(null)}
+                                className="cursor-pointer border-none bg-transparent text-[12px] text-gray-500 hover:text-red-600"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    ) : (
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={e => handleImageSelect(e.target.files?.[0] ?? null)}
+                            className="block w-full text-[12px] text-gray-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+                        />
+                    )}
                 </div>
 
                 {/* Counter */}
@@ -173,7 +228,7 @@ export default function NewsAdminPage() {
                     disabled={loading}
                     className="cursor-pointer rounded-lg border-none bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
                 >
-                    {loading ? 'Saving…' : 'Add headline'}
+                    {loading ? (uploadingImage ? 'Uploading photo…' : 'Saving…') : 'Add headline'}
                 </button>
             </div>
 
@@ -189,11 +244,16 @@ export default function NewsAdminPage() {
                                 key={r.id}
                                 className={`flex items-center justify-between gap-3 px-4 py-2.5 ${i < recent.length - 1 ? 'border-b border-gray-100' : ''}`}
                             >
-                                <div className="min-w-0">
-                                    <p className="truncate text-[12px] text-gray-900">{r.headline}</p>
-                                    <p className="text-[11px] text-gray-400">
-                                        {r.mse_counters?.symbol ?? 'General'} · {r.source_name ?? 'No source'} · {r.published_at}
-                                    </p>
+                                <div className="flex min-w-0 items-center gap-2.5">
+                                    {r.image_url && (
+                                        <img src={r.image_url} alt="" className="h-8 w-8 shrink-0 rounded object-cover" />
+                                    )}
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[12px] text-gray-900">{r.headline}</p>
+                                        <p className="text-[11px] text-gray-400">
+                                            {r.mse_counters?.symbol ?? 'General'} · {r.source_name ?? 'No source'} · {r.published_at}
+                                        </p>
+                                    </div>
                                 </div>
                                 <button
                                     type="button"
