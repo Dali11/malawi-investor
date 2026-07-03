@@ -1,12 +1,12 @@
 import { CommunityPulse } from '@/components/home/CommunityPulse'
 import { CoursePreviews } from '@/components/home/CoursePreviews'
-import { FeaturedAnalysis } from '@/components/home/FeaturedAnalysis'
 import { GlossaryPreview } from '@/components/home/GlossaryPreview'
 import { Hero } from '@/components/home/Hero'
 import { JoinCta } from '@/components/home/JoinCta'
-import { LatestAnalysis } from '@/components/home/LatestAnalysis'
+import { LatestNewsPreview } from '@/components/home/LatestNewsPreview'
+import { TopAnalysisPreview } from '@/components/home/TopAnalysisPreview'
+import { ToolsForInvestors } from '@/components/home/ToolsForInvestors'
 import { MarketMovers } from '@/components/home/MarketMovers'
-import { MarketSnapshot } from '@/components/home/MarketSnapshot'
 import { createClient } from '@/lib/supabase/server'
 import { getMseMarketStatus } from '@/lib/market-status'
 import { getSymbol, PriceMover } from '@/types/home'
@@ -53,8 +53,23 @@ export default async function HomePage() {
     .limit(4)
 
   const featured = analyses?.[0]
-  const secondStory = analyses?.[1]
-  const latest = analyses?.slice(2) ?? []
+  const relatedAnalyses = analyses?.slice(1, 3) ?? []
+
+  // Latest news headlines
+  const { data: newsRows } = await serviceSupabase
+    .from('news_items')
+    .select('id, headline, published_at, source_name, image_url, mse_counters(symbol)')
+    .order('published_at', { ascending: false })
+    .limit(5)
+
+  const news = (newsRows ?? []).map((n: any) => ({
+    id: n.id,
+    headline: n.headline,
+    published_at: n.published_at,
+    source_name: n.source_name,
+    image_url: n.image_url,
+    symbol: getSymbol(n.mse_counters) ?? null,
+  }))
 
   // Top gainers / losers / most active
   const { data: prices } = await supabase
@@ -65,7 +80,6 @@ export default async function HomePage() {
 
   const { gainers, losers } = getTopMovers(prices ?? [])
   const mostActive = getMostActive(prices ?? [])
-  const snapshot = getMarketSnapshot(prices ?? [])
 
   // Glossary preview
   const { data: glossary } = await serviceSupabase
@@ -93,36 +107,23 @@ export default async function HomePage() {
     <div className="space-y-8">
       {!user && <Hero marketStatus={getMseMarketStatus()} indices={heroIndices} />}
       <MarketMovers gainers={gainers} losers={losers} mostActive={mostActive} />
-      <div className="grid grid-cols-1 gap-6 border-b-[0.5px] border-(--color-border-tertiary) pb-6 lg:grid-cols-[1.3fr_1fr]">
-        {featured && <FeaturedAnalysis analysis={featured} secondStory={secondStory} related={latest} />}
-        <MarketSnapshot movers={snapshot} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <LatestNewsPreview items={news} />
+        {featured ? (
+          <TopAnalysisPreview featured={featured} related={relatedAnalyses} />
+        ) : (
+          <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) p-4 text-[13px] text-(--color-text-tertiary) shadow-(--shadow-card)">
+            No analysis published yet.
+          </div>
+        )}
+        <ToolsForInvestors />
       </div>
-      <LatestAnalysis items={latest} />
       <CommunityPulse threads={threads ?? []} />
       {/* <GlossaryPreview items={glossary ?? []} /> */}
       <CoursePreviews courses={courses ?? []} />
       <JoinCta />
     </div>
   )
-}
-
-/**
- * Combines gainers and losers into one list sorted by the size of the
- * move (regardless of direction), so the biggest swings lead. Returns
- * at least 5 entries when available.
- */
-function getMarketSnapshot(prices: PriceMover[], minCount = 5) {
-  const seen = new Set<string>()
-  const latestPerSymbol = prices.filter((p) => {
-    const sym = getSymbol(p.mse_counters)
-    if (!sym || seen.has(sym)) return false
-    seen.add(sym)
-    return true
-  }).filter((p) => p.change_pct != null)
-
-  return [...latestPerSymbol]
-    .sort((a, b) => Math.abs(Number(b.change_pct)) - Math.abs(Number(a.change_pct)))
-    .slice(0, Math.max(minCount, 5))
 }
 
 /**
