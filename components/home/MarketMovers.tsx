@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { TrendingUp, TrendingDown, Activity } from 'lucide-react'
+import { TrendingUp, TrendingDown, Activity, ArrowRight } from 'lucide-react'
 import { getSymbol, type PriceMover } from '@/types/home'
 
 export type ActiveMover = PriceMover & { market_cap?: number | null }
@@ -149,73 +149,87 @@ export function MarketMovers({
 
     // New layout: three side-by-side cards (Top gainers / Top losers / Most
     // active), matching the homepage mockup — sits directly under the Hero.
+    // Mobile shows gainers + losers only (2-up); Most active joins at sm+.
     return (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <MoverCard title="Top gainers" Icon={TrendingUp} iconColor="var(--color-text-success)" emptyLabel="No gainers today">
-                {gainers.map((p, i) => {
-                    const symbol = getSymbol(p.mse_counters)
-                    return (
-                        <MoverRow
-                            key={i}
-                            symbol={symbol}
-                            price={p.price}
-                            href={`/stocks/${symbol?.toLowerCase()}`}
-                            isLast={i === gainers.length - 1}
-                            right={
-                                <span
-                                    className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold font-(family-name:--font-mono)"
-                                    style={{ color: 'var(--color-text-success)', background: 'var(--color-background-success)' }}
-                                >
-                                    +{Number(p.change_pct).toFixed(2)}%
-                                </span>
-                            }
-                        />
-                    )
-                })}
-            </MoverCard>
+        <div className="flex flex-col gap-3">
+            <div className="flex justify-end">
+                <Link
+                    href="/stocks"
+                    className="flex items-center gap-1 text-[12px] font-medium text-(--color-text-secondary) no-underline hover:text-(--color-text-primary)"
+                >
+                    View all
+                    <ArrowRight size={12} aria-hidden="true" />
+                </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <MoverCard title="Top gainers" Icon={TrendingUp} iconColor="var(--color-text-success)" emptyLabel="No gainers today">
+                    {gainers.map((p, i) => {
+                        const symbol = getSymbol(p.mse_counters)
+                        return (
+                            <MoverRow
+                                key={i}
+                                symbol={symbol}
+                                price={p.price}
+                                href={`/stocks/${symbol?.toLowerCase()}`}
+                                isLast={i === gainers.length - 1}
+                                right={
+                                    <span
+                                        className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold font-(family-name:--font-mono)"
+                                        style={{ color: 'var(--color-text-success)', background: 'var(--color-background-success)' }}
+                                    >
+                                        +{Number(p.change_pct).toFixed(2)}%
+                                    </span>
+                                }
+                            />
+                        )
+                    })}
+                </MoverCard>
 
-            <MoverCard title="Top losers" Icon={TrendingDown} iconColor="var(--color-text-danger)" emptyLabel="No losers today">
-                {losers.map((p, i) => {
-                    const symbol = getSymbol(p.mse_counters)
-                    return (
-                        <MoverRow
-                            key={i}
-                            symbol={symbol}
-                            price={p.price}
-                            href={`/stocks/${symbol?.toLowerCase()}`}
-                            isLast={i === losers.length - 1}
-                            right={
-                                <span
-                                    className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold font-(family-name:--font-mono)"
-                                    style={{ color: 'var(--color-text-danger)', background: 'var(--color-background-danger)' }}
-                                >
-                                    {Number(p.change_pct).toFixed(2)}%
-                                </span>
-                            }
-                        />
-                    )
-                })}
-            </MoverCard>
+                <MoverCard title="Top losers" Icon={TrendingDown} iconColor="var(--color-text-danger)" emptyLabel="No losers today">
+                    {losers.map((p, i) => {
+                        const symbol = getSymbol(p.mse_counters)
+                        return (
+                            <MoverRow
+                                key={i}
+                                symbol={symbol}
+                                price={p.price}
+                                href={`/stocks/${symbol?.toLowerCase()}`}
+                                isLast={i === losers.length - 1}
+                                right={
+                                    <span
+                                        className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold font-(family-name:--font-mono)"
+                                        style={{ color: 'var(--color-text-danger)', background: 'var(--color-background-danger)' }}
+                                    >
+                                        {Number(p.change_pct).toFixed(2)}%
+                                    </span>
+                                }
+                            />
+                        )
+                    })}
+                </MoverCard>
 
-            <MoverCard title="Most active" Icon={Activity} iconColor="var(--color-text-tertiary)" emptyLabel="No data available">
-                {mostActive.map((p, i) => {
-                    const symbol = getSymbol(p.mse_counters)
-                    return (
-                        <MoverRow
-                            key={i}
-                            symbol={symbol}
-                            price={p.price}
-                            href={`/stocks/${symbol?.toLowerCase()}`}
-                            isLast={i === mostActive.length - 1}
-                            right={
-                                <span className="text-[12px] font-medium text-(--color-text-tertiary) font-(family-name:--font-mono)">
-                                    {formatCompact(p.market_cap)}
-                                </span>
-                            }
-                        />
-                    )
-                })}
-            </MoverCard>
+                <div className="hidden sm:block">
+                    <MoverCard title="Most active" Icon={Activity} iconColor="var(--color-text-tertiary)" emptyLabel="No data available">
+                        {mostActive.map((p, i) => {
+                            const symbol = getSymbol(p.mse_counters)
+                            return (
+                                <MoverRow
+                                    key={i}
+                                    symbol={symbol}
+                                    price={p.price}
+                                    href={`/stocks/${symbol?.toLowerCase()}`}
+                                    isLast={i === mostActive.length - 1}
+                                    right={
+                                        <span className="text-[12px] font-medium text-(--color-text-tertiary) font-(family-name:--font-mono)">
+                                            {formatCompact(p.market_cap)}
+                                        </span>
+                                    }
+                                />
+                            )
+                        })}
+                    </MoverCard>
+                </div>
+            </div>
         </div>
     )
 }
