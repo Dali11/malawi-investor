@@ -56,14 +56,15 @@ export default async function HomePage() {
   const secondStory = analyses?.[1]
   const latest = analyses?.slice(2) ?? []
 
-  // Top gainers / losers
+  // Top gainers / losers / most active
   const { data: prices } = await supabase
     .from('mse_prices')
-    .select('price, change_pct, mse_counters(symbol)')
+    .select('price, change_pct, market_cap, mse_counters(symbol)')
     .order('price_date', { ascending: false })
     .limit(48)
 
   const { gainers, losers } = getTopMovers(prices ?? [])
+  const mostActive = getMostActive(prices ?? [])
   const snapshot = getMarketSnapshot(prices ?? [])
 
   // Glossary preview
@@ -91,15 +92,13 @@ export default async function HomePage() {
   return (
     <div className="space-y-8">
       {!user && <Hero marketStatus={getMseMarketStatus()} indices={heroIndices} />}
+      <MarketMovers gainers={gainers} losers={losers} mostActive={mostActive} />
       <div className="grid grid-cols-1 gap-6 border-b-[0.5px] border-(--color-border-tertiary) pb-6 lg:grid-cols-[1.3fr_1fr]">
         {featured && <FeaturedAnalysis analysis={featured} secondStory={secondStory} related={latest} />}
         <MarketSnapshot movers={snapshot} />
       </div>
       <LatestAnalysis items={latest} />
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1.4fr]">
-        <MarketMovers gainers={gainers} losers={losers} />
-        <CommunityPulse threads={threads ?? []} />
-      </div>
+      <CommunityPulse threads={threads ?? []} />
       {/* <GlossaryPreview items={glossary ?? []} /> */}
       <CoursePreviews courses={courses ?? []} />
       <JoinCta />
@@ -151,4 +150,23 @@ function getTopMovers(prices: PriceMover[]) {
     .slice(0, 3)
 
   return { gainers, losers }
+}
+
+/**
+ * Dedupes by counter symbol, then ranks by market_cap descending as a
+ * proxy for trading activity — volume isn't tracked yet, see
+ * MostActiveCounters.tsx for the same approach used on /markets.
+ */
+function getMostActive(prices: (PriceMover & { market_cap?: number | null })[]) {
+  const seen = new Set<string>()
+  const latestPerSymbol = prices.filter((p) => {
+    const sym = getSymbol(p.mse_counters)
+    if (!sym || seen.has(sym)) return false
+    seen.add(sym)
+    return true
+  })
+
+  return [...latestPerSymbol]
+    .sort((a, b) => Number(b.market_cap ?? 0) - Number(a.market_cap ?? 0))
+    .slice(0, 3)
 }
