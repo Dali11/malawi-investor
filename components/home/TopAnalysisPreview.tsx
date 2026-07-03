@@ -46,6 +46,11 @@ export function TopAnalysisPreview({ featured, related }: { featured: Analysis; 
                 </p>
             </Link>
 
+            {related.length > 0 && (
+                <p className="border-b-[0.5px] border-(--color-border-tertiary) px-4 pt-3 pb-1.5 text-[11px] font-bold tracking-wide text-(--color-text-tertiary) uppercase">
+                    Related
+                </p>
+            )}
             {related.map((a, i) => {
                 const sym = getSymbol(a.mse_counters)
                 return (
