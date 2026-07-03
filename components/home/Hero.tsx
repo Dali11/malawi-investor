@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react'
 import type { MarketStatus } from '@/lib/market-status'
+
 
 type IndexSnapshot = {
     code: string
@@ -51,10 +52,17 @@ export function Hero({ marketStatus, indices }: HeroProps) {
                         </Link>
                     </div>
                     {indices.length > 0 && (
-                        <div className="mt-1 flex gap-2 rounded-(--border-radius-md) border-[0.5px] border-white/15 bg-black/40 p-2.5">
+                        <div className="relative mt-1 flex gap-2 rounded-(--border-radius-md) border-[0.5px] border-white/15 bg-black/40 p-2.5">
                             {indices.map((idx) => (
                                 <IndexChip key={idx.code} {...idx} size="lg" />
                             ))}
+                            <Link
+                                href="/markets/indices"
+                                aria-label="View all indices"
+                                className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full border-[0.5px] border-white/25 bg-black/50 text-white no-underline"
+                            >
+                                <ArrowRight size={12} aria-hidden="true" />
+                            </Link>
                         </div>
                     )}
                 </div>
@@ -98,6 +106,13 @@ export function Hero({ marketStatus, indices }: HeroProps) {
                             {indices.map((idx) => (
                                 <IndexChip key={idx.code} {...idx} size="lg" />
                             ))}
+                            <Link
+                                href="/markets/indices"
+                                className="absolute top-2 right-3 flex items-center gap-1 rounded-full border-[0.5px] border-white/25 bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white no-underline hover:bg-black/70"
+                            >
+                                View all
+                                <ArrowRight size={12} aria-hidden="true" />
+                            </Link>
                         </div>
                     )}
                 </div>
