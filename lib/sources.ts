@@ -8,4 +8,8 @@ export const NEWS_SOURCES = [
         name: 'Nyasa Times',
         feedUrl: 'https://www.nyasatimes.com/category/business/feed/',
     },
+    {
+        name: 'Malawi Nation',
+        feedUrl: 'https://mwnation.com/category/tie-business/business-news/feed/',
+    },
 ]

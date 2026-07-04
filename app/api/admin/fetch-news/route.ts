@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { excerpt, fetchArticleImage, parseRssFeed } from '@/lib/rss'
 import { NEWS_SOURCES } from '@/lib/sources'
 
-const MAX_PER_SOURCE = 10
+const MAX_PER_SOURCE = 20
 
 /** Strips tracking params, fragments, and trailing slashes so the same
  *  article isn't treated as "new" just because the URL varies slightly
