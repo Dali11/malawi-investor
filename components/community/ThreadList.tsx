@@ -2,123 +2,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { ChevronUp, ChevronDown, MessageCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import type { CommunityThreadRow } from '@/types/community'
-
-const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-    'General Discussion': { bg: 'var(--color-background-tertiary)', text: 'var(--color-text-secondary)' },
-    'Beginner Questions': { bg: 'var(--color-background-success)', text: 'var(--color-text-success)' },
-    'Market News': { bg: 'var(--color-background-info)', text: 'var(--color-text-info)' },
-    'Dividends & IPOs': { bg: 'var(--color-background-warning)', text: 'var(--color-text-warning)' },
-    'Off-topic': { bg: 'var(--color-background-tertiary)', text: 'var(--color-text-secondary)' },
-}
-
-function timeAgo(iso: string) {
-    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-    if (seconds < 60) return 'just now'
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    if (days < 30) return `${days}d ago`
-    return new Date(iso).toLocaleDateString('en-MW', { day: 'numeric', month: 'short' })
-}
-
-function VoteButtons({
-    threadId,
-    upvotes,
-    downvotes,
-    myVote,
-    isLoggedIn,
-}: {
-    threadId: string
-    upvotes: number
-    downvotes: number
-    myVote: 1 | -1 | null
-    isLoggedIn: boolean
-}) {
-    const router = useRouter()
-    const supabase = createClient()
-    const [pending, setPending] = useState(false)
-    const [optimistic, setOptimistic] = useState({ upvotes, downvotes, myVote })
-
-    async function vote(value: 1 | -1, e: React.MouseEvent) {
-        e.preventDefault()
-        e.stopPropagation()
-        if (!isLoggedIn) {
-            router.push(`/login?redirect=${encodeURIComponent('/community')}`)
-            return
-        }
-        if (pending) return
-        setPending(true)
-
-        const prev = optimistic
-        const clearing = prev.myVote === value
-
-        // Optimistic update
-        setOptimistic((s) => {
-            let up = s.upvotes
-            let down = s.downvotes
-            if (s.myVote === 1) up -= 1
-            if (s.myVote === -1) down -= 1
-            if (!clearing) {
-                if (value === 1) up += 1
-                if (value === -1) down += 1
-            }
-            return { upvotes: up, downvotes: down, myVote: clearing ? null : value }
-        })
-
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { setPending(false); router.push('/login?redirect=/community'); return }
-
-        if (clearing) {
-            await supabase.from('community_votes').delete()
-                .eq('user_id', user.id).eq('target_type', 'thread').eq('target_id', threadId)
-        } else {
-            await supabase.from('community_votes').upsert(
-                { user_id: user.id, target_type: 'thread', target_id: threadId, value },
-                { onConflict: 'user_id,target_type,target_id' },
-            )
-        }
-
-        setPending(false)
-        router.refresh()
-    }
-
-    const score = optimistic.upvotes - optimistic.downvotes
-
-    return (
-        <div className="flex flex-col items-center gap-0.5 pt-0.5" style={{ minWidth: 32 }}>
-            <button
-                type="button"
-                onClick={(e) => vote(1, e)}
-                aria-label="Upvote"
-                disabled={pending}
-                className="border-none p-0.5"
-                style={{ color: optimistic.myVote === 1 ? 'var(--color-text-warning)' : 'var(--color-text-tertiary)' }}
-            >
-                <ChevronUp size={18} />
-            </button>
-            <span className="text-[13px] font-medium text-(--color-text-primary) font-(family-name:--font-mono)">
-                {score}
-            </span>
-            <button
-                type="button"
-                onClick={(e) => vote(-1, e)}
-                aria-label="Downvote"
-                disabled={pending}
-                className="border-none p-0.5"
-                style={{ color: optimistic.myVote === -1 ? 'var(--color-text-danger)' : 'var(--color-text-tertiary)' }}
-            >
-                <ChevronDown size={18} />
-            </button>
-        </div>
-    )
-}
+import { MessageCircle } from 'lucide-react'
+import { VoteButtons } from '@/components/community/VoteButtons'
+import { CATEGORY_COLORS, type CommunityThreadRow } from '@/types/community'
+import { timeAgo } from '@/lib/timeAgo'
 
 export function ThreadList({ threads, isLoggedIn }: { threads: CommunityThreadRow[]; isLoggedIn: boolean }) {
     if (threads.length === 0) {
@@ -140,7 +27,8 @@ export function ThreadList({ threads, isLoggedIn }: { threads: CommunityThreadRo
                         className={`flex gap-3.5 px-4 py-3.5 ${i < threads.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
                     >
                         <VoteButtons
-                            threadId={t.id}
+                            targetType="thread"
+                            targetId={t.id}
                             upvotes={t.upvotes}
                             downvotes={t.downvotes}
                             myVote={t.my_vote}
