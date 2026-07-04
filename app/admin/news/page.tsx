@@ -104,6 +104,42 @@ export default function NewsAdminPage() {
         }
     }
 
+    const [fetching, setFetching] = useState(false)
+    const [fetchResult, setFetchResult] = useState<{ inserted: number; skipped: number; errors: string[] } | null>(null)
+
+    async function handleFetchLatest() {
+        setFetching(true)
+        setFetchResult(null)
+        try {
+            const res = await fetch('/api/admin/fetch-news', { method: 'POST' })
+            const data = await res.json()
+            setFetchResult(data)
+            loadRecent()
+        } catch (e: any) {
+            setFetchResult({ inserted: 0, skipped: 0, errors: [e.message ?? 'Request failed'] })
+        } finally {
+            setFetching(false)
+        }
+    }
+
+    const [refreshingImages, setRefreshingImages] = useState(false)
+    const [refreshResult, setRefreshResult] = useState<{ updated: number; unchanged: number; errors: string[] } | null>(null)
+
+    async function handleRefreshImages() {
+        setRefreshingImages(true)
+        setRefreshResult(null)
+        try {
+            const res = await fetch('/api/admin/refresh-news-images', { method: 'POST' })
+            const data = await res.json()
+            setRefreshResult(data)
+            loadRecent()
+        } catch (e: any) {
+            setRefreshResult({ updated: 0, unchanged: 0, errors: [e.message ?? 'Request failed'] })
+        } finally {
+            setRefreshingImages(false)
+        }
+    }
+
     async function handleDelete(id: number) {
         await supabase.from('news_items').delete().eq('id', id)
         loadRecent()
@@ -115,6 +151,48 @@ export default function NewsAdminPage() {
             <p className="mt-0.5 text-[13px] text-gray-500">
                 Add a short headline to the News feed. For full write-ups, use the Research editor instead.
             </p>
+
+            <div className="mt-5 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
+                <div>
+                    <p className="text-[13px] font-medium text-gray-900">Fetch latest headlines</p>
+                    <p className="text-[12px] text-gray-500">Pulls fresh Malawi business/economy headlines from configured sources.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleFetchLatest}
+                    disabled={fetching}
+                    className="cursor-pointer rounded-lg border-none bg-gray-900 px-3.5 py-2 text-[13px] font-medium text-white disabled:opacity-50"
+                >
+                    {fetching ? 'Fetching…' : 'Fetch latest'}
+                </button>
+            </div>
+            {fetchResult && (
+                <p className="mt-2 text-[12px] text-gray-500">
+                    {fetchResult.inserted} added, {fetchResult.skipped} already in the feed
+                    {fetchResult.errors.length > 0 && ` · ${fetchResult.errors.join('; ')}`}
+                </p>
+            )}
+
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
+                <div>
+                    <p className="text-[13px] font-medium text-gray-900">Refresh images</p>
+                    <p className="text-[12px] text-gray-500">Re-derives the article photo for rows stuck with a logo or no image.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleRefreshImages}
+                    disabled={refreshingImages}
+                    className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-[13px] font-medium text-gray-900 disabled:opacity-50"
+                >
+                    {refreshingImages ? 'Refreshing…' : 'Refresh images'}
+                </button>
+            </div>
+            {refreshResult && (
+                <p className="mt-2 text-[12px] text-gray-500">
+                    {refreshResult.updated} updated, {refreshResult.unchanged} left as-is
+                    {refreshResult.errors.length > 0 && ` · ${refreshResult.errors.join('; ')}`}
+                </p>
+            )}
 
             <div className="mt-6 flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-5">
                 {/* Headline */}

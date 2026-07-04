@@ -3,7 +3,6 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
 
 export type NewsItemRow = {
     id: number
@@ -64,19 +63,7 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                             )}
                             <div className="min-w-0 flex-1">
                                 <p className="text-[13px] font-medium text-(--color-text-primary) leading-snug">
-                                    {n.source_url ? (
-                                        <a
-                                            href={n.source_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 text-(--color-text-primary) no-underline hover:underline"
-                                        >
-                                            {n.headline}
-                                            <ExternalLink size={11} className="shrink-0 text-(--color-text-tertiary)" />
-                                        </a>
-                                    ) : (
-                                        n.headline
-                                    )}
+                                    {n.headline}
                                 </p>
                                 {n.summary && (
                                     <p className="mt-0.5 text-[12px] text-(--color-text-secondary) leading-snug">

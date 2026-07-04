@@ -24,6 +24,7 @@ type NewsItem = {
     source_name: string | null
     source_url: string | null
     published_at: string
+    image_url: string | null
 }
 
 type Overview = {
@@ -183,6 +184,13 @@ function NewsList({ items }: { items: NewsItem[] }) {
                     key={i}
                     className={`flex items-start gap-3 px-4 py-3.5 ${i < items.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
                 >
+                    {n.image_url && (
+                        <img
+                            src={n.image_url}
+                            alt=""
+                            className="h-12 w-12 shrink-0 rounded-(--border-radius-md) object-cover"
+                        />
+                    )}
                     <span
                         className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
                         style={{ background: TYPE_COLORS.News.bg, color: TYPE_COLORS.News.text }}
@@ -190,18 +198,7 @@ function NewsList({ items }: { items: NewsItem[] }) {
                         News
                     </span>
                     <div className="min-w-0 flex-1">
-                        {n.source_url ? (
-                            <a
-                                href={n.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[13px] text-(--color-text-primary) leading-snug hover:underline"
-                            >
-                                {n.headline}
-                            </a>
-                        ) : (
-                            <p className="text-[13px] text-(--color-text-primary) leading-snug">{n.headline}</p>
-                        )}
+                        <p className="text-[13px] text-(--color-text-primary) leading-snug">{n.headline}</p>
                         {n.summary && (
                             <p className="mt-0.5 line-clamp-2 sm:line-clamp-1 text-[12px] text-(--color-text-secondary) leading-snug">{n.summary}</p>
                         )}
@@ -287,8 +284,8 @@ export function CounterOverviewTabs({
                                 key={t.key}
                                 onClick={() => setTab(t.key)}
                                 className={`shrink-0 border-b-2 px-3.5 py-2.5 text-[13px] whitespace-nowrap transition-colors ${tab === t.key
-                                        ? 'border-(--color-text-warning) font-medium text-(--color-text-warning)'
-                                        : 'border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)'
+                                    ? 'border-(--color-text-warning) font-medium text-(--color-text-warning)'
+                                    : 'border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)'
                                     }`}
                             >
                                 {t.label}

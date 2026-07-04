@@ -141,7 +141,7 @@ export default async function CounterPage({
 
     const { data: rawNews } = await supabase
         .from('news_items')
-        .select('headline, summary, source_name, source_url, published_at')
+        .select('headline, summary, source_name, source_url, published_at, image_url')
         .eq('counter_id', counter.id)
         .order('published_at', { ascending: false })
         .limit(50)
