@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatDistanceToNow } from 'date-fns'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
+import { getAuthorName, getAuthorInitials } from '@/lib/author'
 
 // ── Shared helper ──────────────────────────────────────────────
 function stripHtml(html: string, maxLength = 160): string {
@@ -83,7 +84,7 @@ export default async function AnalysisArticlePage({
 
     const { data: article } = await supabase
         .from('analyses')
-        .select('id, title, content, created_at, image_url, price_at_post, pe_at_post, market_cap_at_post, mse_counters(symbol, company_name)')
+        .select('id, title, content, created_at, image_url, price_at_post, pe_at_post, market_cap_at_post, mse_counters(symbol, company_name), profiles(full_name)')
         .eq('id', id)
         .eq('published', true)
         .single()
@@ -136,9 +137,11 @@ export default async function AnalysisArticlePage({
 
                 {/* Author row */}
                 <div className="mb-6 flex items-center gap-3 border-b-[0.5px] border-(--color-border-tertiary) pb-6">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--color-background-warning) text-[11px] font-bold text-(--color-text-warning)">BN</div>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--color-background-warning) text-[11px] font-bold text-(--color-text-warning)">
+                        {getAuthorInitials(getAuthorName((article as any).profiles))}
+                    </div>
                     <div>
-                        <p className="text-[13px] font-semibold text-(--color-text-primary)">Bena Nkhoma</p>
+                        <p className="text-[13px] font-semibold text-(--color-text-primary)">{getAuthorName((article as any).profiles)}</p>
                         <p className="text-[12px] text-(--color-text-tertiary)">
                             {formatDistanceToNow(new Date(article.created_at), { addSuffix: true })}
                         </p>

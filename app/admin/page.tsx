@@ -63,6 +63,14 @@ export default function AnalysisAdminPage() {
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
+    // Who's actually logged in right now — this is who gets stamped as
+    // the author on brand-new posts. If this is null, nobody is signed
+    // in with a Supabase session, so author_id can NOT be set no matter
+    // what the form does. See the banner rendered below the header.
+    const [currentUser, setCurrentUser] = useState<{ id: string; email: string | null } | null>(null)
+    const [currentUserName, setCurrentUserName] = useState<string | null>(null)
+    const [checkingAuth, setCheckingAuth] = useState(true)
+
     const supabase = createClient()
 
     const loadRecent = useCallback(() => {
@@ -79,6 +87,21 @@ export default function AnalysisAdminPage() {
             if (data) setCounters(data)
         })
         loadRecent()
+
+        // Figure out who's logged in (if anyone) so we can show
+        // "Publishing as ___" and actually stamp author_id correctly.
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+            setCurrentUser(user ? { id: user.id, email: user.email ?? null } : null)
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', user.id)
+                    .maybeSingle()
+                setCurrentUserName(profile?.full_name ?? user.email ?? null)
+            }
+            setCheckingAuth(false)
+        })
     }, [supabase, loadRecent])
 
     function resetForm() {
@@ -192,7 +215,7 @@ export default function AnalysisAdminPage() {
                 imageUrl = await uploadImage()
                 setUploadingImage(false)
             }
-            const payload = {
+            const payload: Record<string, unknown> = {
                 title: title.trim(),
                 counter_id: counterId ? parseInt(counterId) : null,
                 category,
@@ -202,6 +225,25 @@ export default function AnalysisAdminPage() {
                 pe_at_post: peAtPost ? parseFloat(peAtPost) : null,
                 market_cap_at_post: marketCapAtPost ? parseFloat(marketCapAtPost) : null,
                 published,
+            }
+
+            // Only stamp the author on brand-new posts. Editing an existing
+            // analysis shouldn't reassign it to whoever happens to be logged
+            // in when they hit "Update" — the byline should stay with
+            // whoever originally published it. This re-checks the session
+            // right before saving (rather than trusting the state set on
+            // page load) in case it changed or expired mid-edit.
+            if (!editingId) {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                    payload.author_id = user.id
+                } else {
+                    // No session at all — this is exactly the situation that
+                    // caused the byline to silently fall back to a generic
+                    // name before. Surface it instead of publishing silently
+                    // unattributed.
+                    setError('You are not signed in, so this post will be published without an author. Sign in first if you want your name attached.')
+                }
             }
 
             const { error: writeError } = editingId
@@ -250,6 +292,21 @@ export default function AnalysisAdminPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Who you're posting as — makes the author_id behavior visible
+                instead of it silently succeeding or silently failing. */}
+            {!checkingAuth && (
+                currentUser ? (
+                    <div className="mt-4 rounded-md bg-green-50 px-3 py-2 text-[12px] text-green-800">
+                        Publishing as <strong>{currentUserName ?? currentUser.email}</strong>
+                    </div>
+                ) : (
+                    <div className="mt-4 rounded-md bg-red-50 px-3 py-2 text-[12px] text-red-800">
+                        Not signed in — new posts will be published with no author.{' '}
+                        <Link href="/login" className="font-semibold underline">Sign in</Link>
+                    </div>
+                )
+            )}
 
             <div className="mt-6 flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-5">
                 {editingId && (

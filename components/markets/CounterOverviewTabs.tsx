@@ -198,7 +198,18 @@ function NewsList({ items }: { items: NewsItem[] }) {
                         News
                     </span>
                     <div className="min-w-0 flex-1">
-                        <p className="text-[13px] text-(--color-text-primary) leading-snug">{n.headline}</p>
+                        {n.source_url ? (
+                            <a
+                                href={n.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[13px] text-(--color-text-primary) leading-snug hover:underline"
+                            >
+                                {n.headline}
+                            </a>
+                        ) : (
+                            <p className="text-[13px] text-(--color-text-primary) leading-snug">{n.headline}</p>
+                        )}
                         {n.summary && (
                             <p className="mt-0.5 line-clamp-2 sm:line-clamp-1 text-[12px] text-(--color-text-secondary) leading-snug">{n.summary}</p>
                         )}

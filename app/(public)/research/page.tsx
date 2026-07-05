@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Flame, TrendingUp, TrendingDown } from 'lucide-react'
 import { getSymbol, type PriceMover } from '@/types/home'
 import { ANALYSIS_CATEGORIES, AnalysisCategory, getCategoryLabel } from '@/lib/analysisCategories'
+import { getAuthorName, getAuthorInitials } from '@/lib/author'
 
 
 function getTopMovers(prices: PriceMover[]) {
@@ -50,7 +51,7 @@ export default async function ResearchPage({
     // Build the analyses query with optional symbol + category filter
     let query = supabase
         .from('analyses')
-        .select('id, title, content, category, created_at, image_url, mse_counters(symbol, sector)')
+        .select('id, title, content, category, created_at, image_url, mse_counters(symbol, sector), profiles(full_name)')
         .eq('published', true)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -192,8 +193,10 @@ export default async function ResearchPage({
                                         .slice(0, 200)}…
                                 </p>
                                 <div className="flex items-center gap-2 text-[12px] text-(--color-text-tertiary)">
-                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-(--color-background-warning) text-[9px] font-bold text-(--color-text-warning)">BN</div>
-                                    <span className="font-medium text-(--color-text-secondary)">Dali Kamphani</span>
+                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-(--color-background-warning) text-[9px] font-bold text-(--color-text-warning)">
+                                        {getAuthorInitials(getAuthorName((featured as any).profiles))}
+                                    </div>
+                                    <span className="font-medium text-(--color-text-secondary)">{getAuthorName((featured as any).profiles)}</span>
                                     <span>·</span>
                                     <span>{formatDistanceToNow(new Date(featured.created_at), { addSuffix: true })}</span>
                                 </div>

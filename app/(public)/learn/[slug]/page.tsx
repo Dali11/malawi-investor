@@ -27,18 +27,39 @@ export default async function ModulePage({
         redirect(`/login?redirect=/learn/${slug}`)
     }
 
-    const { data: modules } = await supabase
-        .from('modules')
-        .select('id, slug, order_index, title, description, content, quiz, widget_type')
+    const { data: chapters } = await supabase
+        .from('chapters')
+        .select('id, slug, order_index, title')
         .order('order_index', { ascending: true })
 
-    const allModules = modules ?? []
+    const { data: modules } = await supabase
+        .from('modules')
+        .select('id, slug, order_index, lesson_order, chapter_id, title, description, content, quiz, widget_type')
+
+    const allChapters = chapters ?? []
+    const chapterRank = new Map(allChapters.map((c, i) => [c.id, i]))
+
+    // Same ordering as the /learn index: grouped by chapter order, then lesson_order
+    // within the chapter. Falls back to the old order_index for any module that
+    // isn't assigned to a chapter yet, so nothing disappears mid-migration.
+    const allModules = [...(modules ?? [])].sort((a, b) => {
+        const chapterA = chapterRank.get(a.chapter_id) ?? 999
+        const chapterB = chapterRank.get(b.chapter_id) ?? 999
+        if (chapterA !== chapterB) return chapterA - chapterB
+        if (a.chapter_id && b.chapter_id) return (a.lesson_order ?? 0) - (b.lesson_order ?? 0)
+        return (a.order_index ?? 0) - (b.order_index ?? 0)
+    })
+
     const moduleIndex = allModules.findIndex(m => m.slug === slug)
     const currentModule = allModules[moduleIndex]
 
     if (!currentModule) {
         redirect('/learn')
     }
+
+    const currentChapter = allChapters.find(c => c.id === currentModule.chapter_id)
+    const chapterModules = allModules.filter(m => m.chapter_id === currentModule.chapter_id)
+    const positionInChapter = chapterModules.findIndex(m => m.id === currentModule.id)
 
     const { data: progress } = await supabase
         .from('user_progress')
@@ -68,11 +89,13 @@ export default async function ModulePage({
         <div className="min-h-screen bg-white px-4 py-12">
             <div className="max-w-2xl mx-auto">
                 <Link href="/learn" className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-block">
-                    ← Back to all modules
+                    ← Back to all lessons
                 </Link>
 
                 <p className="text-xs uppercase tracking-wide text-amber-600 font-medium mb-1">
-                    Module {moduleIndex + 1} of {allModules.length}
+                    {currentChapter
+                        ? `${currentChapter.title} · Lesson ${positionInChapter + 1} of ${chapterModules.length}`
+                        : `Module ${moduleIndex + 1} of ${allModules.length}`}
                 </p>
                 <h1 className="text-2xl font-medium text-gray-900 mb-2">{currentModule.title}</h1>
                 <p className="text-gray-500 mb-8">{currentModule.description}</p>
