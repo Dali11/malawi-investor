@@ -73,6 +73,11 @@ const ny: LearnDict = {
 
 export const learnDict: Record<LearnLang, LearnDict> = { en, ny }
 
+// Lives here (not in learn.ts) because learn.ts imports `next/headers`,
+// which cannot be pulled into client components — this constant needs to
+// be importable from both LanguageToggle.tsx (client) and learn.ts (server).
+export const LEARN_LANG_COOKIE = 'mi-learn-lang'
+
 /** Picks a translated field, falling back to English when the ny value is missing/blank. */
 export function pickText(enValue: string, nyValue: string | null | undefined, lang: LearnLang): string {
     if (lang === 'ny' && nyValue && nyValue.trim().length > 0) return nyValue

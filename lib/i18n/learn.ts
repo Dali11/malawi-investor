@@ -5,15 +5,17 @@
 // server components that query Supabase directly — a cookie is readable
 // during that server render, so there's no flash of the wrong language
 // and no client round-trip needed to pick the right rows.
+//
+// This file imports `next/headers`, so it must never be imported from a
+// client component (e.g. LanguageToggle.tsx) — those import the cookie
+// name and types straight from './learn-dict' instead.
 
 import { cookies } from 'next/headers'
+import { LEARN_LANG_COOKIE, learnDict, pickText } from './learn-dict'
+import type { LearnLang, LearnDict } from './learn-dict'
 
-export type { LearnLang, LearnDict } from './learn-dict'
-export { learnDict, pickText } from './learn-dict'
-
-export const LEARN_LANG_COOKIE = 'mi-learn-lang'
-
-import type { LearnLang } from './learn-dict'
+export type { LearnLang, LearnDict }
+export { learnDict, pickText, LEARN_LANG_COOKIE }
 
 export async function getLearnLang(): Promise<LearnLang> {
     const cookieStore = await cookies()

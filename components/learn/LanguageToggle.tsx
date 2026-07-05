@@ -1,8 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
-import type { LearnLang } from '@/lib/i18n/learn-dict'
-import { LEARN_LANG_COOKIE } from '@/lib/i18n/learn'
+import { LEARN_LANG_COOKIE, type LearnLang } from '@/lib/i18n/learn-dict'
 
 /**
  * Switches the /learn section between English and Chichewa.
