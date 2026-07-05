@@ -1,7 +1,52 @@
 'use client'
 import { useState } from 'react'
+import type { LearnLang } from '@/lib/i18n/learn-dict'
 
 type Variant = 'dilution' | 'rights'
+
+// Widget-local Chichewa strings. Kept here rather than in the shared
+// learn-dict.ts because these sentences are specific to this widget's
+// mechanic (dilution math, rights-issue math) and aren't reused elsewhere.
+const copy = {
+    en: {
+        totalOwnership: 'Chombo Bakery, total ownership',
+        ownedByYou: 'owned by you',
+        sharesOf: (yours: number, total: number) => `${yours.toLocaleString()} of ${total.toLocaleString()} shares`,
+        gridAriaLabel: (yours: number, total: number, pct: string) =>
+            `A grid showing you own ${yours} of ${total} total shares in Chombo Bakery, or ${pct} percent`,
+        buyMore: 'Buy 5 more shares yourself',
+        bakeryIssues: 'Bakery issues 20 shares to other investors',
+        reset: 'Reset',
+        tryBoth: "Try both buttons a few times, in any order, and watch what moves your percentage and what doesn't.",
+        boughtMore: 'You bought 5 more shares directly, growing your own stake.',
+        bakeryIssued: "Chombo Bakery issued 20 new shares to other investors to fund a second location. You didn't sell anything, but the pie just got bigger.",
+        takeUpRights: 'Take up your rights',
+        letLapse: 'Let them lapse',
+        tookUp: (pct: string) =>
+            `You bought your allotment, 5 new shares for the 10 you held. Your ownership stayed at ${pct}%, same as before the raise, because you participated in proportion to what you already had.`,
+        lapsed: (pct: string) =>
+            `You kept your 10 shares, but everyone else who took up their rights grew the total to 150. Your ownership dropped from 10% to ${pct}%, the same dilution from lesson 1, just as a choice this time.`,
+    },
+    ny: {
+        totalOwnership: 'Chombo Bakery, umwini wonse',
+        ownedByYou: 'ndi umwini wanu',
+        sharesOf: (yours: number, total: number) => `ma shares ${yours.toLocaleString()} pa ${total.toLocaleString()}`,
+        gridAriaLabel: (yours: number, total: number, pct: string) =>
+            `Chithunzi chosonyeza kuti muli ndi shares ${yours} pa shares zonse ${total} za Chombo Bakery, kapena ${pct} peresenti`,
+        buyMore: 'Gulani ma shares 5 owonjezera nokha',
+        bakeryIssues: 'Bakery ikupereka ma shares 20 kwa oyika ndalama ena',
+        reset: 'Yambaninso',
+        tryBoth: 'Yesani mabatani onse awiri kangapo, mʼndondomeko iliyonse, ndipo onani chomwe chikusintha gawo lanu ndi chomwe sichikusintha.',
+        boughtMore: 'Mwagula ma shares 5 owonjezera mwachindunji, kukulitsa gawo lanu.',
+        bakeryIssued: 'Chombo Bakery yapereka ma shares 20 atsopano kwa oyika ndalama ena kuti apeze ndalama zotsegulira nthambi yachiwiri. Simunagulitse kalikonse, koma keke yakula.',
+        takeUpRights: 'Tengani ufulu wanu',
+        letLapse: 'Asiyeni azimirire',
+        tookUp: (pct: string) =>
+            `Mwagula gawo lanu, ma shares 5 atsopano pa ma 10 amene munali nawo. Umwini wanu wakhalabe pa ${pct}%, mofanana ndi nthawi isanachitike kupeza ndalamayi, chifukwa munatenga nawo mbali molingana ndi zomwe munali nazo kale.`,
+        lapsed: (pct: string) =>
+            `Mwasunga ma shares anu 10, koma ena onse amene anatenga ufulu wawo akulitsa chiwerengero chonse kufika pa 150. Umwini wanu wachepa kuchoka pa 10% kufika pa ${pct}%, kuchepa kwomwe kunachitika pa phunziro 1, tsopano ngati chisankho.`,
+    },
+} as const
 
 /**
  * The ownership grid. Used by two lessons with the same underlying mechanic:
@@ -12,7 +57,8 @@ type Variant = 'dilution' | 'rights'
  *    real decision: take up your rights (keep your percentage) or let them
  *    lapse (get diluted), so lesson 1's sandbox becomes a one-time choice.
  */
-export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Variant }) {
+export default function OwnershipGrid({ variant = 'dilution', lang = 'en' }: { variant?: Variant; lang?: LearnLang }) {
+    const t = copy[lang]
     const baseTotal = 100
     const baseYours = 10
 
@@ -22,17 +68,18 @@ export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Vari
     const [choiceMade, setChoiceMade] = useState<'took_up' | 'lapsed' | null>(null)
 
     const pct = (yourShares / totalShares) * 100
+    const pctStr = pct.toFixed(1)
     const cols = totalShares <= 100 ? 10 : totalShares <= 200 ? 15 : 20
     const hasChanged = totalShares !== baseTotal || yourShares !== baseYours
 
     function buyMoreShares() {
         setYourShares(s => s + 5)
-        setLastAction('You bought 5 more shares directly, growing your own stake.')
+        setLastAction(t.boughtMore)
     }
 
     function bakeryIssuesMore() {
-        setTotalShares(t => t + 20)
-        setLastAction('Chombo Bakery issued 20 new shares to other investors to fund a second location. You didn\'t sell anything, but the pie just got bigger.')
+        setTotalShares(t2 => t2 + 20)
+        setLastAction(t.bakeryIssued)
     }
 
     function reset() {
@@ -59,13 +106,13 @@ export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Vari
         <div className="rounded-xl border border-(--color-border-tertiary) bg-(--color-background-secondary) p-5 my-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <div>
-                    <p className="text-xs text-(--color-text-secondary) mb-0.5">Chombo Bakery, total ownership</p>
+                    <p className="text-xs text-(--color-text-secondary) mb-0.5">{t.totalOwnership}</p>
                     <p className="text-2xl font-medium text-(--color-text-primary)">
-                        {pct.toFixed(1)}% <span className="text-sm text-(--color-text-secondary) font-normal">owned by you</span>
+                        {pctStr}% <span className="text-sm text-(--color-text-secondary) font-normal">{t.ownedByYou}</span>
                     </p>
                 </div>
                 <p className="text-xs text-(--color-text-tertiary)">
-                    {yourShares.toLocaleString()} of {totalShares.toLocaleString()} shares
+                    {t.sharesOf(yourShares, totalShares)}
                 </p>
             </div>
 
@@ -73,7 +120,7 @@ export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Vari
                 className="grid gap-[2px] mb-4"
                 style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
                 role="img"
-                aria-label={`A grid showing you own ${yourShares} of ${totalShares} total shares in Chombo Bakery, or ${pct.toFixed(1)} percent`}
+                aria-label={t.gridAriaLabel(yourShares, totalShares, pctStr)}
             >
                 {Array.from({ length: totalShares }).map((_, i) => (
                     <div
@@ -95,25 +142,25 @@ export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Vari
                             onClick={buyMoreShares}
                             className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
                         >
-                            Buy 5 more shares yourself
+                            {t.buyMore}
                         </button>
                         <button
                             onClick={bakeryIssuesMore}
                             className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
                         >
-                            Bakery issues 20 shares to other investors
+                            {t.bakeryIssues}
                         </button>
                         {hasChanged && (
                             <button
                                 onClick={reset}
                                 className="text-sm px-4 py-2 rounded-lg text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
                             >
-                                Reset
+                                {t.reset}
                             </button>
                         )}
                     </div>
                     <p className="text-sm text-(--color-text-secondary)">
-                        {lastAction ?? 'Try both buttons a few times, in any order, and watch what moves your percentage and what doesn\'t.'}
+                        {lastAction ?? t.tryBoth}
                     </p>
                 </>
             ) : (
@@ -124,24 +171,22 @@ export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Vari
                                 onClick={takeUpRights}
                                 className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
                             >
-                                Take up your rights
+                                {t.takeUpRights}
                             </button>
                             <button
                                 onClick={letRightsLapse}
                                 className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
                             >
-                                Let them lapse
+                                {t.letLapse}
                             </button>
                         </div>
                     ) : choiceMade === 'took_up' ? (
                         <p className="text-sm text-(--color-text-secondary)">
-                            You bought your allotment, 5 new shares for the 10 you held. Your ownership stayed at {pct.toFixed(1)}%,
-                            same as before the raise, because you participated in proportion to what you already had.
+                            {t.tookUp(pctStr)}
                         </p>
                     ) : (
                         <p className="text-sm text-(--color-text-secondary)">
-                            You kept your 10 shares, but everyone else who took up their rights grew the total to 150.
-                            Your ownership dropped from 10% to {pct.toFixed(1)}%, the same dilution from lesson 1, just as a choice this time.
+                            {t.lapsed(pctStr)}
                         </p>
                     )}
                 </>

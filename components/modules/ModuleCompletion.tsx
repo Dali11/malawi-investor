@@ -35,7 +35,7 @@ export default function ModuleCompletion({
             {!isCompleted && quiz && (
                 <ModuleQuiz quiz={quiz} onCorrect={() => setUnlocked(true)} lang={lang} />
             )}
-            {!isCompleted && widget && widgetGates && widget.render({ onCorrect: () => setUnlocked(true) })}
+            {!isCompleted && widget && widgetGates && widget.render({ onCorrect: () => setUnlocked(true), lang })}
 
             <form action={markComplete}>
                 <button

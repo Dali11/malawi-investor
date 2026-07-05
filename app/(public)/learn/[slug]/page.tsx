@@ -180,7 +180,7 @@ export default async function ModulePage({
                             </ReactMarkdown>
                         </div>
 
-                        <ModuleWidget widgetType={currentModule.widget_type} />
+                        <ModuleWidget widgetType={currentModule.widget_type} lang={lang} />
                     </>
                 )}
                 <ModuleCompletion

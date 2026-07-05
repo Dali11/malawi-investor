@@ -1,10 +1,11 @@
 import DividendCalculator from './DivedendCalculator'
 import TickerModuleSection from './TickerModuleSection'
 import OwnershipGrid from './OwnershipGrid'
+import type { LearnLang } from '@/lib/i18n/learn-dict'
 
 type WidgetEntry = {
     gatesCompletion: boolean
-    render: (props: { onCorrect: () => void }) => React.ReactNode
+    render: (props: { onCorrect: () => void; lang?: LearnLang }) => React.ReactNode
 }
 
 export const widgetRegistry: Record<string, WidgetEntry> = {
@@ -18,10 +19,10 @@ export const widgetRegistry: Record<string, WidgetEntry> = {
     },
     ownership_grid: {
         gatesCompletion: false,
-        render: () => <OwnershipGrid variant="dilution" />,
+        render: ({ lang }) => <OwnershipGrid variant="dilution" lang={lang} />,
     },
     ownership_grid_rights: {
         gatesCompletion: false,
-        render: () => <OwnershipGrid variant="rights" />,
+        render: ({ lang }) => <OwnershipGrid variant="rights" lang={lang} />,
     },
 }
