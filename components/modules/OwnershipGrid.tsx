@@ -35,7 +35,7 @@ const copy = {
             `Chithunzi chosonyeza kuti muli ndi shares ${yours} pa shares zonse ${total} za Chombo Bakery, kapena ${pct} peresenti`,
         buyMore: 'Gulani ma shares 5 owonjezera nokha',
         bakeryIssues: 'Bakery ikupereka ma shares 20 kwa oyika ndalama ena',
-        reset: 'Yambaninso',
+        reset: 'Yambilaninso',
         tryBoth: 'Yesani mabatani onse awiri kangapo, mʼndondomeko iliyonse, ndipo onani chomwe chikusintha gawo lanu ndi chomwe sichikusintha.',
         boughtMore: 'Mwagula ma shares 5 owonjezera mwachindunji, kukulitsa gawo lanu.',
         bakeryIssued: 'Chombo Bakery yapereka ma shares 20 atsopano kwa oyika ndalama ena kuti apeze ndalama zotsegulira nthambi yachiwiri. Simunagulitse kalikonse, koma keke yakula.',
