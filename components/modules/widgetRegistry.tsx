@@ -1,5 +1,6 @@
 import DividendCalculator from './DivedendCalculator'
 import TickerModuleSection from './TickerModuleSection'
+import OwnershipGrid from './OwnershipGrid'
 
 type WidgetEntry = {
     gatesCompletion: boolean
@@ -14,5 +15,13 @@ export const widgetRegistry: Record<string, WidgetEntry> = {
     ticker_demo: {
         gatesCompletion: true,
         render: ({ onCorrect }) => <TickerModuleSection onCorrect={onCorrect} />,
+    },
+    ownership_grid: {
+        gatesCompletion: false,
+        render: () => <OwnershipGrid variant="dilution" />,
+    },
+    ownership_grid_rights: {
+        gatesCompletion: false,
+        render: () => <OwnershipGrid variant="rights" />,
     },
 }
