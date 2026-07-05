@@ -5,11 +5,12 @@ type Variant = 'dilution' | 'rights'
 
 /**
  * The ownership grid. Used by two lessons with the same underlying mechanic:
- *  - "dilution": what-is-a-share, lesson 1. One action (issue more shares),
- *    shows your slice shrinking even though your share count didn't change.
- *  - "rights": what-is-a-rights-issue, lesson 6. Same grid, now framed as a
- *    choice: take up your rights (keep your percentage) or let them lapse
- *    (get diluted), so the abstract lesson from lesson 1 becomes a decision.
+ *  - "dilution": what-is-a-share, lesson 1. A small repeatable sandbox: buy
+ *    more shares to grow your stake, or let the bakery issue more to other
+ *    investors and watch your slice shrink, same share count, smaller pie.
+ *  - "rights": what-is-a-rights-issue, lesson 6. Same grid, framed as a single
+ *    real decision: take up your rights (keep your percentage) or let them
+ *    lapse (get diluted), so lesson 1's sandbox becomes a one-time choice.
  */
 export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Variant }) {
     const baseTotal = 100
@@ -17,14 +18,27 @@ export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Vari
 
     const [totalShares, setTotalShares] = useState(baseTotal)
     const [yourShares, setYourShares] = useState(baseYours)
-    const [choiceMade, setChoiceMade] = useState<'issued' | 'took_up' | 'lapsed' | null>(null)
+    const [lastAction, setLastAction] = useState<string | null>(null)
+    const [choiceMade, setChoiceMade] = useState<'took_up' | 'lapsed' | null>(null)
 
     const pct = (yourShares / totalShares) * 100
-    const cols = totalShares <= 100 ? 10 : 15
+    const cols = totalShares <= 100 ? 10 : totalShares <= 200 ? 15 : 20
+    const hasChanged = totalShares !== baseTotal || yourShares !== baseYours
 
-    function issueMoreShares() {
-        setTotalShares(150)
-        setChoiceMade('issued')
+    function buyMoreShares() {
+        setYourShares(s => s + 5)
+        setLastAction('You bought 5 more shares directly, growing your own stake.')
+    }
+
+    function bakeryIssuesMore() {
+        setTotalShares(t => t + 20)
+        setLastAction('Chombo Bakery issued 20 new shares to other investors to fund a second location. You didn\'t sell anything, but the pie just got bigger.')
+    }
+
+    function reset() {
+        setTotalShares(baseTotal)
+        setYourShares(baseYours)
+        setLastAction(null)
     }
 
     function takeUpRights() {
@@ -76,19 +90,31 @@ export default function OwnershipGrid({ variant = 'dilution' }: { variant?: Vari
 
             {variant === 'dilution' ? (
                 <>
-                    {!choiceMade ? (
+                    <div className="flex flex-wrap gap-2 mb-3">
                         <button
-                            onClick={issueMoreShares}
+                            onClick={buyMoreShares}
                             className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
                         >
-                            Chombo Bakery issues 50 more shares to fund a second location
+                            Buy 5 more shares yourself
                         </button>
-                    ) : (
-                        <p className="text-sm text-(--color-text-secondary)">
-                            You still hold exactly 10 shares, the same as before. But the bakery now has 150 shares total instead of 100,
-                            so your slice shrank from 10% to {pct.toFixed(1)}%, without you selling anything.
-                        </p>
-                    )}
+                        <button
+                            onClick={bakeryIssuesMore}
+                            className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
+                        >
+                            Bakery issues 20 shares to other investors
+                        </button>
+                        {hasChanged && (
+                            <button
+                                onClick={reset}
+                                className="text-sm px-4 py-2 rounded-lg text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                            >
+                                Reset
+                            </button>
+                        )}
+                    </div>
+                    <p className="text-sm text-(--color-text-secondary)">
+                        {lastAction ?? 'Try both buttons a few times, in any order, and watch what moves your percentage and what doesn\'t.'}
+                    </p>
                 </>
             ) : (
                 <>
