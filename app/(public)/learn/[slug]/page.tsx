@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import ModuleCompletion from '@/components/modules/ModuleCompletion'
 import { ModuleWidget } from '@/components/modules/ModuleWidget'
+import { widgetRegistry } from '@/components/modules/widgetRegistry'
 import ModuleTabs from '@/components/modules/ModuleTabs'
 import OrderSimulator from '@/components/modules/OrderSimulator'
 import SettlementJourney from '@/components/modules/SettlementJourney'
@@ -90,6 +91,17 @@ export default async function ModulePage({
         ? (isTranslated ? pickText(currentChapter.title, currentChapter.title_ny, lang) : currentChapter.title)
         : null
 
+    // The three "tabbed" widget types (portfolio/financials/order-flow) put
+    // their widget in its own tab rather than beside the article, so they
+    // stay at reading width. Everything else — including no widget at all —
+    // only gets the wide, side-by-side treatment when there's actually a
+    // standalone widget (dividend_calculator, ownership_grid, etc.) to sit
+    // next to the article; otherwise a lone article stretched across a wide
+    // desktop layout would just look sparse.
+    const isTabbedWidget = ['portfolio_simulator', 'financial_statement_explorer', 'order_simulator_tabs'].includes(currentModule.widget_type ?? '')
+    const widgetEntry = currentModule.widget_type ? widgetRegistry[currentModule.widget_type] : null
+    const hasStandaloneWidget = !!widgetEntry && !widgetEntry.gatesCompletion
+
     async function markComplete() {
         'use server'
         const supabase = await createClient()
@@ -129,7 +141,11 @@ export default async function ModulePage({
                 <p className="text-(--color-text-secondary) mb-6">{displayDescription}</p>
 
                 {untranslatedNotice}
+            </div>
 
+            {/* Wider on desktop only when the article has a standalone widget to sit beside;
+                mobile always stacks full-width regardless of this max-width. */}
+            <div className={hasStandaloneWidget && !isTabbedWidget ? 'max-w-2xl lg:max-w-5xl mx-auto' : 'max-w-2xl mx-auto'}>
                 {currentModule.widget_type === 'portfolio_simulator' ? (
                     <ModuleTabs
                         labels={t.tabsPortfolio}
@@ -172,17 +188,26 @@ export default async function ModulePage({
                         tab2={<OrderSimulator />}
                         tab3={<SettlementJourney />}
                     />
-                ) : (
-                    <>
-                        <div className="border border-(--color-border-tertiary) rounded-xl p-6 mb-8 bbn-article-body">
+                ) : hasStandaloneWidget ? (
+                    <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
+                        <div className="border border-(--color-border-tertiary) rounded-xl p-6 mb-8 lg:mb-0 bbn-article-body">
                             <ReactMarkdown>
                                 {displayContent || t.contentComingSoon}
                             </ReactMarkdown>
                         </div>
 
                         <ModuleWidget widgetType={currentModule.widget_type} lang={lang} />
-                    </>
+                    </div>
+                ) : (
+                    <div className="border border-(--color-border-tertiary) rounded-xl p-6 mb-8 bbn-article-body">
+                        <ReactMarkdown>
+                            {displayContent || t.contentComingSoon}
+                        </ReactMarkdown>
+                    </div>
                 )}
+            </div>
+
+            <div className="max-w-2xl mx-auto">
                 <ModuleCompletion
                     quiz={displayQuiz}
                     widgetType={currentModule.widget_type}
