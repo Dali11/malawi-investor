@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { learnDict, type LearnLang } from '@/lib/i18n/learn-dict'
 
 type Quiz = {
     question: string
@@ -10,12 +11,15 @@ type Quiz = {
 export default function ModuleQuiz({
     quiz,
     onCorrect,
+    lang = 'en',
 }: {
     quiz: Quiz
     onCorrect: () => void
+    lang?: LearnLang
 }) {
     const [selected, setSelected] = useState<number | null>(null)
     const [isCorrect, setIsCorrect] = useState(false)
+    const t = learnDict[lang]
 
     function handleAnswer(index: number) {
         setSelected(index)
@@ -26,7 +30,7 @@ export default function ModuleQuiz({
 
     return (
         <div className="bg-(--color-background-secondary) rounded-xl p-5 my-6">
-            <p className="text-xs text-(--color-text-secondary) mb-3">Quick check</p>
+            <p className="text-xs text-(--color-text-secondary) mb-3">{t.quickCheck}</p>
             <p className="text-sm font-medium text-(--color-text-primary) mb-3">{quiz.question}</p>
             <div className="flex flex-wrap gap-2">
                 {quiz.options.map((option, index) => {
@@ -52,9 +56,7 @@ export default function ModuleQuiz({
             </div>
             {selected !== null && (
                 <p className={`text-xs mt-3 ${isCorrect ? 'text-(--color-text-success)' : 'text-(--color-text-danger)'}`}>
-                    {isCorrect
-                        ? 'Correct — you can mark this module complete now.'
-                        : 'Not quite — try another answer.'}
+                    {isCorrect ? t.correctAnswer : t.wrongAnswer}
                 </p>
             )}
         </div>

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import ModuleQuiz from './ModuleQuiz'
 import { widgetRegistry } from './widgetRegistry'
+import { learnDict, type LearnLang } from '@/lib/i18n/learn-dict'
 
 type Quiz = {
     question: string
@@ -14,13 +15,16 @@ export default function ModuleCompletion({
     widgetType,
     isCompleted,
     markComplete,
+    lang = 'en',
 }: {
     quiz?: Quiz | null
     widgetType?: string | null
     isCompleted: boolean
     markComplete: () => Promise<void>
+    lang?: LearnLang
 }) {
     const [unlocked, setUnlocked] = useState(isCompleted)
+    const t = learnDict[lang]
 
     const widget = widgetType ? widgetRegistry[widgetType] : null
     const widgetGates = widget?.gatesCompletion ?? false
@@ -29,7 +33,7 @@ export default function ModuleCompletion({
     return (
         <>
             {!isCompleted && quiz && (
-                <ModuleQuiz quiz={quiz} onCorrect={() => setUnlocked(true)} />
+                <ModuleQuiz quiz={quiz} onCorrect={() => setUnlocked(true)} lang={lang} />
             )}
             {!isCompleted && widget && widgetGates && widget.render({ onCorrect: () => setUnlocked(true) })}
 
@@ -38,13 +42,13 @@ export default function ModuleCompletion({
                     type="submit"
                     disabled={isCompleted || (hasGate && !unlocked)}
                     className={`w-full text-sm font-medium py-2 rounded-lg transition-colors disabled:cursor-not-allowed ${isCompleted
-                            ? 'bg-green-600 text-white'
-                            : unlocked || !hasGate
-                                ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                                : 'bg-gray-200 text-gray-400'
+                        ? 'bg-green-600 text-white'
+                        : unlocked || !hasGate
+                            ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                            : 'bg-gray-200 text-gray-400'
                         }`}
                 >
-                    {isCompleted ? '✓ Completed' : 'Mark as complete'}
+                    {isCompleted ? t.completed : t.markComplete}
                 </button>
             </form>
         </>
