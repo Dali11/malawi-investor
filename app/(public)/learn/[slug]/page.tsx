@@ -1,107 +1,188 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { revalidatePath } from 'next/cache'
+import ModuleCompletion from '@/components/modules/ModuleCompletion'
+import { ModuleWidget } from '@/components/modules/ModuleWidget'
+import ModuleTabs from '@/components/modules/ModuleTabs'
+import OrderSimulator from '@/components/modules/OrderSimulator'
+import SettlementJourney from '@/components/modules/SettlementJourney'
+import ReactMarkdown from 'react-markdown'
+import IncomeStatementExplorer from '@/components/modules/IncomeStatementExplorer'
+import CompanyComparison from '@/components/modules/CompanyComparison'
+import RedFlags from '@/components/modules/RedFlags'
+import PortfolioSimulator from '@/components/modules/PortfolioSimulator'
+import DiversificationGuide from '@/components/modules/DiversificationGuide'
 
-export default async function LearnPage() {
+export default async function ModulePage({
+    params,
+}: {
+    params: Promise<{ slug: string }>
+}) {
+    const { slug } = await params
     const supabase = await createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        redirect(`/login?redirect=/learn/${slug}`)
+    }
 
     const { data: chapters } = await supabase
         .from('chapters')
-        .select('id, slug, order_index, title, description')
+        .select('id, slug, order_index, title')
         .order('order_index', { ascending: true })
 
     const { data: modules } = await supabase
         .from('modules')
-        .select('id, slug, order_index, lesson_order, chapter_id, title, description')
-        .order('order_index', { ascending: true })
-
-    let completedModuleIds = new Set<string>()
-    if (user && modules) {
-        const { data: progress } = await supabase
-            .from('user_progress')
-            .select('module_id')
-            .eq('user_id', user.id)
-
-        completedModuleIds = new Set(progress?.map(p => p.module_id) ?? [])
-    }
+        .select('id, slug, order_index, lesson_order, chapter_id, title, description, content, quiz, widget_type')
 
     const allChapters = chapters ?? []
-    const allModules = modules ?? []
-    const completedCount = allModules.filter(m => completedModuleIds.has(m.id)).length
+    const chapterRank = new Map(allChapters.map((c, i) => [c.id, i]))
 
-    // Global "next up" is still the first incomplete lesson in overall order,
-    // soft-gating only, nothing is actually locked.
-    const nextModuleId = allModules.find(m => !completedModuleIds.has(m.id))?.id
+    // Same ordering as the /learn index: grouped by chapter order, then lesson_order
+    // within the chapter. Falls back to the old order_index for any module that
+    // isn't assigned to a chapter yet, so nothing disappears mid-migration.
+    const allModules = [...(modules ?? [])].sort((a, b) => {
+        const chapterA = chapterRank.get(a.chapter_id) ?? 999
+        const chapterB = chapterRank.get(b.chapter_id) ?? 999
+        if (chapterA !== chapterB) return chapterA - chapterB
+        if (a.chapter_id && b.chapter_id) return (a.lesson_order ?? 0) - (b.lesson_order ?? 0)
+        return (a.order_index ?? 0) - (b.order_index ?? 0)
+    })
+
+    const moduleIndex = allModules.findIndex(m => m.slug === slug)
+    const currentModule = allModules[moduleIndex]
+
+    if (!currentModule) {
+        redirect('/learn')
+    }
+
+    const currentChapter = allChapters.find(c => c.id === currentModule.chapter_id)
+    const chapterModules = allModules.filter(m => m.chapter_id === currentModule.chapter_id)
+    const positionInChapter = chapterModules.findIndex(m => m.id === currentModule.id)
+
+    const { data: progress } = await supabase
+        .from('user_progress')
+        .select('module_id')
+        .eq('user_id', user.id)
+
+    const completedModuleIds = new Set(progress?.map(p => p.module_id) ?? [])
+    const isCompleted = completedModuleIds.has(currentModule.id)
+    const nextModule = allModules[moduleIndex + 1]
+    const prevModule = allModules[moduleIndex - 1]
+
+    async function markComplete() {
+        'use server'
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        await supabase
+            .from('user_progress')
+            .upsert({ user_id: user.id, module_id: currentModule.id })
+
+        revalidatePath('/learn')
+        revalidatePath(`/learn/${slug}`)
+    }
 
     return (
         <div className="min-h-screen bg-(--color-background-primary) px-4 py-12">
             <div className="max-w-2xl mx-auto">
-                <div className="flex justify-between items-start mb-10">
-                    <div>
-                        <p className="text-xs uppercase tracking-wide text-amber-600 font-medium mb-1">
-                            Malawi Investor
-                        </p>
-                        <h1 className="text-2xl font-medium text-(--color-text-primary)">Learn the MSE</h1>
-                    </div>
-                    {user && (
-                        <p className="text-sm text-(--color-text-secondary)">
-                            {completedCount} of {allModules.length} lessons completed
-                        </p>
-                    )}
-                </div>
+                <Link href="/learn" className="text-sm text-(--color-text-secondary) hover:text-(--color-text-primary) mb-6 inline-block">
+                    ← Back to all lessons
+                </Link>
 
-                <div className="space-y-10">
-                    {allChapters.map((chapter) => {
-                        const chapterModules = allModules
-                            .filter(m => m.chapter_id === chapter.id)
-                            .sort((a, b) => (a.lesson_order ?? 0) - (b.lesson_order ?? 0))
+                <p className="text-xs uppercase tracking-wide text-amber-600 font-medium mb-1">
+                    {currentChapter
+                        ? `${currentChapter.title} · Lesson ${positionInChapter + 1} of ${chapterModules.length}`
+                        : `Module ${moduleIndex + 1} of ${allModules.length}`}
+                </p>
+                <h1 className="text-2xl font-medium text-(--color-text-primary) mb-2">{currentModule.title}</h1>
+                <p className="text-(--color-text-secondary) mb-8">{currentModule.description}</p>
 
-                        if (chapterModules.length === 0) return null
-
-                        return (
-                            <div key={chapter.id}>
-                                <div className="mb-3">
-                                    <h2 className="text-base font-medium text-(--color-text-primary)">{chapter.title}</h2>
-                                    {chapter.description && (
-                                        <p className="text-sm text-(--color-text-secondary)">{chapter.description}</p>
-                                    )}
-                                </div>
-
-                                <div className="space-y-3">
-                                    {chapterModules.map((module, i) => {
-                                        const isCompleted = completedModuleIds.has(module.id)
-                                        const isNext = module.id === nextModuleId
-
-                                        return (
-                                            <Link
-                                                key={module.id}
-                                                href={`/learn/${module.slug}`}
-                                                className={`block border rounded-xl p-4 transition-colors ${isNext
-                                                    ? 'border-amber-400 bg-(--color-background-warning)'
-                                                    : 'border-(--color-border-tertiary) bg-(--color-background-primary) hover:border-(--color-border-secondary)'
-                                                    } ${!isCompleted && !isNext ? 'opacity-60' : ''}`}
-                                            >
-                                                <div className="flex justify-between items-center">
-                                                    <div>
-                                                        <p className="text-sm font-medium text-(--color-text-primary) mb-1">
-                                                            {i + 1}. {module.title}
-                                                        </p>
-                                                        <p className="text-sm text-(--color-text-secondary)">{module.description}</p>
-                                                    </div>
-                                                    {isCompleted && (
-                                                        <span className="text-xs text-amber-600 font-medium flex-shrink-0 ml-3">
-                                                            Done
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </Link>
-                                        )
-                                    })}
+                {currentModule.widget_type === 'portfolio_simulator' ? (
+                    <ModuleTabs
+                        labels={[
+                            '1. The idea',
+                            '2. Try it',
+                            '3. How much is enough',
+                        ]}
+                        tab1={
+                            <div className="border border-(--color-border-tertiary) rounded-xl p-6 bbn-article-body">
+                                <ReactMarkdown>
+                                    {currentModule.content || 'Lesson content coming soon.'}
+                                </ReactMarkdown>
+                            </div>
+                        }
+                        tab2={<PortfolioSimulator />}
+                        tab3={<DiversificationGuide />}
+                    />
+                ) : currentModule.widget_type === 'financial_statement_explorer' ? (
+                    <ModuleTabs
+                        labels={[
+                            '1. Read a statement',
+                            '2. Compare two companies',
+                            '3. Red flags',
+                        ]}
+                        tab1={
+                            <div className="border border-(--color-border-tertiary) rounded-xl p-6 bbn-article-body">
+                                <ReactMarkdown>
+                                    {currentModule.content || 'Lesson content coming soon.'}
+                                </ReactMarkdown>
+                                <div className="mt-4">
+                                    <IncomeStatementExplorer />
                                 </div>
                             </div>
-                        )
-                    })}
+                        }
+                        tab2={<CompanyComparison />}
+                        tab3={<RedFlags />}
+                    />
+                ) : currentModule.widget_type === 'order_simulator_tabs' ? (
+                    <ModuleTabs
+                        labels={[
+                            '1. The basics',
+                            '2. Try it',
+                            '3. After you click buy',
+                        ]}
+                        tab1={
+                            <div className="border border-(--color-border-tertiary) rounded-xl p-6 bbn-article-body">
+                                <ReactMarkdown>
+                                    {currentModule.content || 'Lesson content coming soon.'}
+                                </ReactMarkdown>
+                            </div>
+                        }
+                        tab2={<OrderSimulator />}
+                        tab3={<SettlementJourney />}
+                    />
+                ) : (
+                    <>
+                        <div className="border border-(--color-border-tertiary) rounded-xl p-6 mb-8 bbn-article-body">
+                            <ReactMarkdown>
+                                {currentModule.content || 'Lesson content coming soon.'}
+                            </ReactMarkdown>
+                        </div>
+
+                        <ModuleWidget widgetType={currentModule.widget_type} />
+                    </>
+                )}
+                <ModuleCompletion
+                    quiz={currentModule.quiz}
+                    widgetType={currentModule.widget_type}
+                    isCompleted={isCompleted}
+                    markComplete={markComplete}
+                />
+
+                <div className="flex justify-between mt-8 text-sm">
+                    {prevModule ? (
+                        <Link href={`/learn/${prevModule.slug}`} className="text-(--color-text-secondary) hover:text-(--color-text-primary)">
+                            ← {prevModule.title}
+                        </Link>
+                    ) : <span />}
+                    {nextModule ? (
+                        <Link href={`/learn/${nextModule.slug}`} className="text-amber-600 hover:underline">
+                            {nextModule.title} →
+                        </Link>
+                    ) : <span />}
                 </div>
             </div>
         </div>
