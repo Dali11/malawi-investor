@@ -1,6 +1,7 @@
 import DividendCalculator from './DivedendCalculator'
 import TickerModuleSection from './TickerModuleSection'
 import OwnershipGrid from './OwnershipGrid'
+import MatchingDemo from './MatchingDemo'
 import type { LearnLang } from '@/lib/i18n/learn-dict'
 
 type WidgetEntry = {
@@ -24,5 +25,9 @@ export const widgetRegistry: Record<string, WidgetEntry> = {
     ownership_grid_rights: {
         gatesCompletion: false,
         render: ({ lang }) => <OwnershipGrid variant="rights" lang={lang} />,
+    },
+    matching_demo: {
+        gatesCompletion: false,
+        render: ({ lang }) => <MatchingDemo lang={lang} />,
     },
 }
