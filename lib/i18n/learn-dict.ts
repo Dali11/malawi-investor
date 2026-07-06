@@ -23,8 +23,11 @@ export type LearnDict = {
     markComplete: string
     completed: string
     quickCheck: string
+    questionOf: (i: number, total: number) => string
     correctAnswer: string
+    correctAnswerNext: string
     wrongAnswer: string
+    nextQuestion: string
     notTranslatedNotice: string
     tabsPortfolio: [string, string, string]
     tabsFinancials: [string, string, string]
@@ -43,8 +46,11 @@ const en: LearnDict = {
     markComplete: 'Mark as complete',
     completed: '✓ Completed',
     quickCheck: 'Quick check',
+    questionOf: (i, total) => `Question ${i} of ${total}`,
     correctAnswer: 'Correct — you can mark this module complete now.',
+    correctAnswerNext: 'Correct — next question.',
     wrongAnswer: 'Not quite — try another answer.',
+    nextQuestion: 'Next question',
     notTranslatedNotice: "This lesson isn't translated into Chichewa yet — showing the English version below.",
     tabsPortfolio: ['1. The idea', '2. Try it', '3. How much is enough'],
     tabsFinancials: ['1. Read a statement', '2. Compare two companies', '3. Red flags'],
@@ -63,8 +69,11 @@ const ny: LearnDict = {
     markComplete: 'Onetsani kuti mwamaliza',
     completed: '✓ Yamalizidwa',
     quickCheck: 'Yesetsani kudziwa',
+    questionOf: (i, total) => `Funso ${i} la ${total}`,
     correctAnswer: 'Zolondola — mutha kuonetsa kuti mwamaliza gawoli tsopano.',
+    correctAnswerNext: 'Zolondola — funso lotsatira.',
     wrongAnswer: 'Ayi, si zimenezo — yesaninso.',
+    nextQuestion: 'Funso lotsatira',
     notTranslatedNotice: 'Phunziroli silinamasuliridwe mu Chichewa pakadali pano — tikuonetsani mu Chingerezi pansipa.',
     tabsPortfolio: ['1. Lingaliro', '2. Yesani nokha', '3. Kuchuluka kokwanira'],
     tabsFinancials: ['1. Werengani chiwerengero', '2. Yerekezerani makampani awiri', '3. Zizindikiro zoyipa'],

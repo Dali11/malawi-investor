@@ -17,7 +17,7 @@ export default function ModuleCompletion({
     markComplete,
     lang = 'en',
 }: {
-    quiz?: Quiz | null
+    quiz?: Quiz | Quiz[] | null
     widgetType?: string | null
     isCompleted: boolean
     markComplete: () => Promise<void>
