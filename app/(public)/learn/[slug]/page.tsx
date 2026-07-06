@@ -101,6 +101,11 @@ export default async function ModulePage({
     const isTabbedWidget = ['portfolio_simulator', 'financial_statement_explorer', 'order_simulator_tabs'].includes(currentModule.widget_type ?? '')
     const widgetEntry = currentModule.widget_type ? widgetRegistry[currentModule.widget_type] : null
     const hasStandaloneWidget = !!widgetEntry && !widgetEntry.gatesCompletion
+    const isWide = hasStandaloneWidget && !isTabbedWidget
+    // Shared across the header, content, and footer wrappers below so their
+    // left/right edges always line up — mixing max-w-2xl and max-w-5xl
+    // centered divs on the same page makes them drift out of alignment.
+    const wrapperClass = isWide ? 'max-w-2xl lg:max-w-5xl mx-auto' : 'max-w-2xl mx-auto'
 
     async function markComplete() {
         'use server'
@@ -124,7 +129,7 @@ export default async function ModulePage({
 
     return (
         <div className="min-h-screen bg-(--color-background-primary) px-4 py-12">
-            <div className="max-w-2xl mx-auto">
+            <div className={wrapperClass}>
                 <div className="flex justify-between items-center mb-6 gap-3">
                     <Link href="/learn" className="text-sm text-(--color-text-secondary) hover:text-(--color-text-primary)">
                         {t.backToAllLessons}
@@ -145,7 +150,7 @@ export default async function ModulePage({
 
             {/* Wider on desktop only when the article has a standalone widget to sit beside;
                 mobile always stacks full-width regardless of this max-width. */}
-            <div className={hasStandaloneWidget && !isTabbedWidget ? 'max-w-2xl lg:max-w-5xl mx-auto' : 'max-w-2xl mx-auto'}>
+            <div className={wrapperClass}>
                 {currentModule.widget_type === 'portfolio_simulator' ? (
                     <ModuleTabs
                         labels={t.tabsPortfolio}
@@ -207,7 +212,7 @@ export default async function ModulePage({
                 )}
             </div>
 
-            <div className="max-w-2xl mx-auto">
+            <div className={wrapperClass}>
                 <ModuleCompletion
                     quiz={displayQuiz}
                     widgetType={currentModule.widget_type}

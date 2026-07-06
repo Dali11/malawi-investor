@@ -35,7 +35,7 @@ const copy = {
             `Chithunzi chosonyeza kuti muli ndi shares ${yours} pa shares zonse ${total} za Chombo Bakery, kapena ${pct} peresenti`,
         buyMore: 'Gulani ma shares 5 owonjezera nokha',
         bakeryIssues: 'Bakery ikupereka ma shares 20 kwa oyika ndalama ena',
-        reset: 'Yambilaninso',
+        reset: 'Yambaninso',
         tryBoth: 'Yesani mabatani onse awiri kangapo, mʼndondomeko iliyonse, ndipo onani chomwe chikusintha gawo lanu ndi chomwe sichikusintha.',
         boughtMore: 'Mwagula ma shares 5 owonjezera mwachindunji, kukulitsa gawo lanu.',
         bakeryIssued: 'Chombo Bakery yapereka ma shares 20 atsopano kwa oyika ndalama ena kuti apeze ndalama zotsegulira nthambi yachiwiri. Simunagulitse kalikonse, koma keke yakula.',
@@ -116,81 +116,89 @@ export default function OwnershipGrid({ variant = 'dilution', lang = 'en' }: { v
                 </p>
             </div>
 
-            <div
-                className="grid gap-[2px] mb-4"
-                style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-                role="img"
-                aria-label={t.gridAriaLabel(yourShares, totalShares, pctStr)}
-            >
-                {Array.from({ length: totalShares }).map((_, i) => (
-                    <div
-                        key={i}
-                        className="aspect-square rounded-[2px]"
-                        style={{
-                            background: i < yourShares
-                                ? 'var(--color-brand)'
-                                : 'var(--color-border-secondary)',
-                        }}
-                    />
-                ))}
-            </div>
+            {/* Grid on the left, controls + status text on the right (stacked on
+                mobile) — keeps the whole interaction visible without scrolling,
+                since the widget already sits in a fairly narrow column next to
+                the article on desktop. */}
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                <div
+                    className="grid gap-[2px] sm:w-[220px] sm:flex-shrink-0"
+                    style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+                    role="img"
+                    aria-label={t.gridAriaLabel(yourShares, totalShares, pctStr)}
+                >
+                    {Array.from({ length: totalShares }).map((_, i) => (
+                        <div
+                            key={i}
+                            className="aspect-square rounded-[2px]"
+                            style={{
+                                background: i < yourShares
+                                    ? 'var(--color-brand)'
+                                    : 'var(--color-border-secondary)',
+                            }}
+                        />
+                    ))}
+                </div>
 
-            {variant === 'dilution' ? (
-                <>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        <button
-                            onClick={buyMoreShares}
-                            className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
-                        >
-                            {t.buyMore}
-                        </button>
-                        <button
-                            onClick={bakeryIssuesMore}
-                            className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
-                        >
-                            {t.bakeryIssues}
-                        </button>
-                        {hasChanged && (
-                            <button
-                                onClick={reset}
-                                className="text-sm px-4 py-2 rounded-lg text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
-                            >
-                                {t.reset}
-                            </button>
-                        )}
-                    </div>
-                    <p className="text-sm text-(--color-text-secondary)">
-                        {lastAction ?? t.tryBoth}
-                    </p>
-                </>
-            ) : (
-                <>
-                    {!choiceMade ? (
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={takeUpRights}
-                                className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
-                            >
-                                {t.takeUpRights}
-                            </button>
-                            <button
-                                onClick={letRightsLapse}
-                                className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
-                            >
-                                {t.letLapse}
-                            </button>
-                        </div>
-                    ) : choiceMade === 'took_up' ? (
-                        <p className="text-sm text-(--color-text-secondary)">
-                            {t.tookUp(pctStr)}
-                        </p>
+                <div className="flex-1 min-w-0">
+                    {variant === 'dilution' ? (
+                        <>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                <button
+                                    onClick={buyMoreShares}
+                                    className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
+                                >
+                                    {t.buyMore}
+                                </button>
+                                <button
+                                    onClick={bakeryIssuesMore}
+                                    className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
+                                >
+                                    {t.bakeryIssues}
+                                </button>
+                                {hasChanged && (
+                                    <button
+                                        onClick={reset}
+                                        className="text-sm px-4 py-2 rounded-lg text-(--color-text-secondary) hover:text-(--color-text-primary) transition-colors"
+                                    >
+                                        {t.reset}
+                                    </button>
+                                )}
+                            </div>
+                            <p className="text-sm text-(--color-text-secondary)">
+                                {lastAction ?? t.tryBoth}
+                            </p>
+                        </>
                     ) : (
-                        <p className="text-sm text-(--color-text-secondary)">
-                            {t.lapsed(pctStr)}
-                        </p>
+                        <>
+                            {!choiceMade ? (
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={takeUpRights}
+                                        className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
+                                    >
+                                        {t.takeUpRights}
+                                    </button>
+                                    <button
+                                        onClick={letRightsLapse}
+                                        className="text-sm px-4 py-2 rounded-lg border border-(--color-border-secondary) text-(--color-text-primary) hover:bg-(--color-background-tertiary) transition-colors"
+                                    >
+                                        {t.letLapse}
+                                    </button>
+                                </div>
+                            ) : choiceMade === 'took_up' ? (
+                                <p className="text-sm text-(--color-text-secondary)">
+                                    {t.tookUp(pctStr)}
+                                </p>
+                            ) : (
+                                <p className="text-sm text-(--color-text-secondary)">
+                                    {t.lapsed(pctStr)}
+                                </p>
+                            )}
+                        </>
                     )}
-                </>
-            )}
+                </div>
+            </div>
         </div>
     )
 }
