@@ -1,7 +1,7 @@
 // app/(public)/news/NewsFeed.tsx
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 
@@ -47,8 +47,15 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
         return filtered.slice(start, start + PAGE_SIZE)
     }, [filtered, page])
 
+    const topRef = useRef<HTMLDivElement>(null)
+
+    function goToPage(p: number) {
+        setPage(p)
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+
     return (
-        <div className="space-y-3">
+        <div className="space-y-3" ref={topRef}>
             <input
                 type="search"
                 placeholder="Search headlines, symbols or sources…"
@@ -125,7 +132,7 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                     <div className="flex items-center gap-1.5">
                         <button
                             type="button"
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            onClick={() => goToPage(Math.max(1, page - 1))}
                             disabled={page === 1}
                             className="flex h-8 w-8 items-center justify-center rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) text-(--color-text-secondary) transition-colors hover:bg-(--color-background-secondary) disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label="Previous page"
@@ -141,7 +148,7 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                                     )}
                                     <button
                                         type="button"
-                                        onClick={() => setPage(p)}
+                                        onClick={() => goToPage(p)}
                                         className={`flex h-8 min-w-8 items-center justify-center rounded-(--border-radius-md) px-2 text-[12px] font-medium transition-colors ${p === page
                                                 ? 'bg-(--color-brand) text-[#062012]'
                                                 : 'border-[0.5px] border-(--color-border-secondary) text-(--color-text-secondary) hover:bg-(--color-background-secondary)'
@@ -153,7 +160,7 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                             ))}
                         <button
                             type="button"
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            onClick={() => goToPage(Math.min(totalPages, page + 1))}
                             disabled={page === totalPages}
                             className="flex h-8 w-8 items-center justify-center rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) text-(--color-text-secondary) transition-colors hover:bg-(--color-background-secondary) disabled:cursor-not-allowed disabled:opacity-40"
                             aria-label="Next page"
