@@ -2,6 +2,7 @@ import DividendCalculator from './DivedendCalculator'
 import TickerModuleSection from './TickerModuleSection'
 import OwnershipGrid from './OwnershipGrid'
 import MatchingDemo from './MatchingDemo'
+import BrokerFlow from './BrokerFlow'
 import type { LearnLang } from '@/lib/i18n/learn-dict'
 
 type WidgetEntry = {
@@ -29,5 +30,9 @@ export const widgetRegistry: Record<string, WidgetEntry> = {
     matching_demo: {
         gatesCompletion: false,
         render: ({ lang }) => <MatchingDemo lang={lang} />,
+    },
+    broker_flow: {
+        gatesCompletion: false,
+        render: ({ lang }) => <BrokerFlow lang={lang} />,
     },
 }
