@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { excerpt, fetchArticleImage, parseRssFeed } from '@/lib/rss'
 import { NEWS_SOURCES } from '@/lib/sources'
 
-const MAX_PER_SOURCE = 20
+const MAX_PER_SOURCE = 10
 
 /** Strips tracking params, fragments, and trailing slashes so the same
  *  article isn't treated as "new" just because the URL varies slightly
@@ -66,6 +66,7 @@ export async function POST() {
 
                 const { error } = await supabase.from('news_items').insert({
                     counter_id: null,
+                    category: 'Market News',
                     headline: item.title,
                     summary: item.description ? excerpt(item.description) : null,
                     source_name: source.name,

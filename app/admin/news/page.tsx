@@ -12,6 +12,7 @@ export default function NewsAdminPage() {
     const [recent, setRecent] = useState<any[]>([])
 
     const [counterId, setCounterId] = useState('')
+    const [category, setCategory] = useState('Market News')
     const [headline, setHeadline] = useState('')
     const [summary, setSummary] = useState('')
     const [sourceName, setSourceName] = useState('')
@@ -50,6 +51,7 @@ export default function NewsAdminPage() {
 
     function resetForm() {
         setCounterId('')
+        setCategory('Market News')
         setHeadline('')
         setSummary('')
         setSourceName('')
@@ -85,6 +87,7 @@ export default function NewsAdminPage() {
             }
             const { error: insertError } = await supabase.from('news_items').insert({
                 counter_id: counterId ? parseInt(counterId) : null,
+                category,
                 headline: headline.trim(),
                 summary: summary.trim() || null,
                 source_name: sourceName.trim() || null,
@@ -247,6 +250,21 @@ export default function NewsAdminPage() {
                         {counters.map(c => (
                             <option key={c.id} value={c.id}>{c.symbol} — {c.company_name}</option>
                         ))}
+                    </select>
+                </div>
+
+                {/* Category */}
+                <div>
+                    <label className="mb-1 block text-[12px] font-medium text-gray-600">Category</label>
+                    <select
+                        value={category}
+                        onChange={e => setCategory(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-amber-400"
+                    >
+                        <option>Market News</option>
+                        <option>Company News</option>
+                        <option>Economy</option>
+                        <option>IPOs & Corporate Actions</option>
                     </select>
                 </div>
 

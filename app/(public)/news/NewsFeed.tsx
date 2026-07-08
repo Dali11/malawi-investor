@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export type NewsItemRow = {
     id: number
@@ -14,33 +14,93 @@ export type NewsItemRow = {
     source_url: string | null
     published_at: string
     image_url: string | null
+    category: string
 }
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 12
 
 function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString('en-MW', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function NewsCard({ n }: { n: NewsItemRow }) {
+    const body = (
+        <>
+            <div className="aspect-[16/10] w-full overflow-hidden bg-(--color-background-tertiary)">
+                {n.image_url ? (
+                    <img src={n.image_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[11px] text-(--color-text-tertiary)">
+                        Malawi Investor
+                    </div>
+                )}
+            </div>
+            <div className="p-3.5">
+                <p className="text-[11px] font-bold tracking-wide text-(--color-text-info) uppercase">{n.category}</p>
+                <p className="mt-1 text-[14px] leading-snug font-semibold text-(--color-text-primary) line-clamp-3">
+                    {n.headline}
+                </p>
+                <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[11px] text-(--color-text-tertiary)">
+                    {n.symbol && (
+                        <>
+                            <Link
+                                href={`/stocks/${n.symbol.toLowerCase()}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="font-semibold text-(--color-text-primary) no-underline hover:underline"
+                            >
+                                {n.symbol}
+                            </Link>
+                            <span>·</span>
+                        </>
+                    )}
+                    {n.source_name && <span>{n.source_name} ·</span>}
+                    <span>{formatDate(n.published_at)}</span>
+                </p>
+            </div>
+        </>
+    )
+
+    const cardClasses =
+        'block overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) no-underline shadow-(--shadow-card) transition-transform hover:-translate-y-0.5'
+
+    if (n.source_url) {
+        return (
+            <a href={n.source_url} target="_blank" rel="noopener noreferrer" className={cardClasses}>
+                {body}
+            </a>
+        )
+    }
+    return <div className={cardClasses}>{body}</div>
+}
+
 export function NewsFeed({ items }: { items: NewsItemRow[] }) {
     const [search, setSearch] = useState('')
+    const [category, setCategory] = useState('All')
     const [page, setPage] = useState(1)
+
+    const categories = useMemo(() => {
+        const set = new Set(items.map(n => n.category))
+        return ['All', ...Array.from(set)]
+    }, [items])
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase()
-        if (!q) return items
-        return items.filter(n =>
-            n.headline.toLowerCase().includes(q) ||
-            (n.summary ?? '').toLowerCase().includes(q) ||
-            (n.symbol ?? '').toLowerCase().includes(q) ||
-            (n.source_name ?? '').toLowerCase().includes(q),
-        )
-    }, [items, search])
+        return items.filter(n => {
+            if (category !== 'All' && n.category !== category) return false
+            if (!q) return true
+            return (
+                n.headline.toLowerCase().includes(q) ||
+                (n.summary ?? '').toLowerCase().includes(q) ||
+                (n.symbol ?? '').toLowerCase().includes(q) ||
+                (n.source_name ?? '').toLowerCase().includes(q)
+            )
+        })
+    }, [items, search, category])
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
-    // Reset to page 1 whenever the search narrows/changes the result set.
-    useEffect(() => { setPage(1) }, [search])
+    // Reset to page 1 whenever the search or category narrows the result set.
+    useEffect(() => { setPage(1) }, [search, category])
 
     const paged = useMemo(() => {
         const start = (page - 1) * PAGE_SIZE
@@ -55,7 +115,7 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
     }
 
     return (
-        <div className="space-y-3" ref={topRef}>
+        <div className="space-y-4" ref={topRef}>
             <input
                 type="search"
                 placeholder="Search headlines, symbols or sources…"
@@ -64,65 +124,33 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                 className="w-full rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) bg-(--color-background-primary) px-3.5 py-2 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-tertiary) outline-none focus:border-(--color-border-primary) sm:max-w-xs"
             />
 
-            <div className="overflow-hidden rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) shadow-(--shadow-card)">
-                {filtered.length === 0 ? (
-                    <p className="px-4 py-10 text-center text-[13px] text-(--color-text-tertiary)">
-                        No headlines match your search.
-                    </p>
-                ) : (
-                    paged.map((n, i) => (
-                        <div
-                            key={n.id}
-                            className={`flex items-start gap-3 px-4 py-3.5 ${i < paged.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
-                        >
-                            {n.image_url && (
-                                <img
-                                    src={n.image_url}
-                                    alt=""
-                                    className="h-14 w-14 shrink-0 rounded-(--border-radius-md) object-cover"
-                                />
-                            )}
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[13px] font-medium text-(--color-text-primary) leading-snug">
-                                    {n.source_url ? (
-                                        <a
-                                            href={n.source_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 text-(--color-text-primary) no-underline hover:underline"
-                                        >
-                                            {n.headline}
-                                            <ExternalLink size={11} className="shrink-0 text-(--color-text-tertiary)" />
-                                        </a>
-                                    ) : (
-                                        n.headline
-                                    )}
-                                </p>
-                                {n.summary && (
-                                    <p className="mt-0.5 text-[12px] text-(--color-text-secondary) leading-snug">
-                                        {n.summary}
-                                    </p>
-                                )}
-                                <p className="mt-1 flex flex-wrap gap-x-1.5 text-[11px] text-(--color-text-tertiary)">
-                                    {n.symbol && (
-                                        <>
-                                            <Link
-                                                href={`/stocks/${n.symbol.toLowerCase()}`}
-                                                className="font-semibold text-(--color-text-primary) no-underline hover:underline"
-                                            >
-                                                {n.symbol}
-                                            </Link>
-                                            <span>·</span>
-                                        </>
-                                    )}
-                                    {n.source_name && <span>{n.source_name} ·</span>}
-                                    <span>{formatDate(n.published_at)}</span>
-                                </p>
-                            </div>
-                        </div>
-                    ))
-                )}
+            <div className="flex flex-wrap gap-2 border-b-[0.5px] border-(--color-border-tertiary) pb-3">
+                {categories.map(c => (
+                    <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCategory(c)}
+                        className={`rounded-full px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap transition-colors ${c === category
+                                ? 'bg-(--color-brand) text-[#062012]'
+                                : 'border-[0.5px] border-(--color-border-secondary) text-(--color-text-secondary) hover:bg-(--color-background-secondary)'
+                            }`}
+                    >
+                        {c}
+                    </button>
+                ))}
             </div>
+
+            {filtered.length === 0 ? (
+                <p className="px-4 py-10 text-center text-[13px] text-(--color-text-tertiary)">
+                    No headlines match your search.
+                </p>
+            ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {paged.map(n => (
+                        <NewsCard key={n.id} n={n} />
+                    ))}
+                </div>
+            )}
 
             {filtered.length > 0 && totalPages > 1 && (
                 <div className="flex items-center justify-between pt-1">

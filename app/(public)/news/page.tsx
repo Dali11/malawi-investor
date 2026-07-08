@@ -25,7 +25,7 @@ export default async function NewsPage() {
 
     const { data: rawItems } = await supabase
         .from('news_items')
-        .select('id, headline, summary, source_name, source_url, published_at, image_url, mse_counters(symbol)')
+        .select('id, headline, summary, source_name, source_url, published_at, image_url, category, mse_counters(symbol)')
         .order('published_at', { ascending: false })
         .limit(200)
 
@@ -38,6 +38,7 @@ export default async function NewsPage() {
         source_url: n.source_url,
         published_at: n.published_at,
         image_url: n.image_url ?? null,
+        category: n.category ?? 'Market News',
     }))
 
     if (items.length === 0) {
