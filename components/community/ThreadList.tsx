@@ -2,12 +2,46 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { MessageCircle } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { VoteButtons } from '@/components/community/VoteButtons'
 import { CATEGORY_COLORS, type CommunityThreadRow } from '@/types/community'
 import { timeAgo } from '@/lib/timeAgo'
 
 export function ThreadList({ threads, isLoggedIn }: { threads: CommunityThreadRow[]; isLoggedIn: boolean }) {
+    const router = useRouter()
+    const supabase = createClient()
+
+    // Live updates for the list: new threads, vote changes, and
+    // reply_count bumps (which also reorder "most active" sort) all
+    // refresh the page. Not filtered by category — the server query
+    // already applies whatever category is active on refresh, so this
+    // just needs to know "something changed", not "does it match".
+    useEffect(() => {
+        let timeout: ReturnType<typeof setTimeout> | null = null
+        const scheduleRefresh = () => {
+            if (timeout) clearTimeout(timeout)
+            timeout = setTimeout(() => router.refresh(), 500)
+        }
+
+        const channel = supabase
+            .channel('community-threads-list')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'community_threads' },
+                scheduleRefresh,
+            )
+            .subscribe()
+
+        return () => {
+            if (timeout) clearTimeout(timeout)
+            supabase.removeChannel(channel)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     if (threads.length === 0) {
         return (
             <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) px-4 py-10 text-center shadow-(--shadow-card)">
