@@ -2,7 +2,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -27,6 +27,15 @@ export function VoteButtons({
     const supabase = createClient()
     const [pending, setPending] = useState(false)
     const [optimistic, setOptimistic] = useState({ upvotes, downvotes, myVote })
+
+    // Keep the local optimistic snapshot in sync with fresh server data
+    // (e.g. after a realtime-triggered router.refresh() from someone
+    // else's vote). Without this, an already-mounted VoteButtons never
+    // picks up changes made anywhere but its own click handler — new
+    // props alone don't reset useState after the first render.
+    useEffect(() => {
+        setOptimistic({ upvotes, downvotes, myVote })
+    }, [upvotes, downvotes, myVote])
 
     async function vote(value: 1 | -1, e: React.MouseEvent) {
         e.preventDefault()
