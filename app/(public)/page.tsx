@@ -23,10 +23,10 @@ export default async function HomePage() {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Latest MASI/MDSI/MFSI snapshot — only fetched/shown for logged-out
-  // visitors, since the Hero (and this data) is acquisition-only content.
+  // Latest MASI/MDSI/MFSI snapshot for the Hero — shown to everyone now,
+  // logged in or not.
   let heroIndices: { code: string; value: number | null; dayChangePct: number | null }[] = []
-  if (!user) {
+  {
     const { data: indexRows } = await serviceSupabase
       .from('mse_indices')
       .select('index_code, value, day_change_pct, index_date')
@@ -104,7 +104,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-8">
-      {!user && <Hero marketStatus={getMseMarketStatus()} indices={heroIndices} />}
+      <Hero marketStatus={getMseMarketStatus()} indices={heroIndices} />
       <MarketMovers gainers={gainers} losers={losers} mostActive={mostActive} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <LatestNewsPreview items={news} />
