@@ -29,11 +29,11 @@ export const NEWS_SOURCES = [
         feedUrl: 'https://mwnation.com/feed',
         isBusinessCategoryFeed: false,
     },
-    {
-        name: 'Malawi24',
-        feedUrl: 'https://malawi24.com/feed',
-        isBusinessCategoryFeed: false,
-    },
+    // {
+    //     name: 'Malawi24',
+    //     feedUrl: 'https://malawi24.com/feed',
+    //     isBusinessCategoryFeed: false,
+    // },
     {
         // Unverified feed path — confirmed to have *a* feed, but the exact
         // URL wasn't available to check. Standard WordPress guess; watch
