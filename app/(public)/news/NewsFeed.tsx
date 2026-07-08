@@ -1,9 +1,9 @@
 // app/(public)/news/NewsFeed.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 
 export type NewsItemRow = {
     id: number
@@ -16,12 +16,15 @@ export type NewsItemRow = {
     image_url: string | null
 }
 
+const PAGE_SIZE = 10
+
 function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString('en-MW', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function NewsFeed({ items }: { items: NewsItemRow[] }) {
     const [search, setSearch] = useState('')
+    const [page, setPage] = useState(1)
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase()
@@ -33,6 +36,16 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
             (n.source_name ?? '').toLowerCase().includes(q),
         )
     }, [items, search])
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+
+    // Reset to page 1 whenever the search narrows/changes the result set.
+    useEffect(() => { setPage(1) }, [search])
+
+    const paged = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE
+        return filtered.slice(start, start + PAGE_SIZE)
+    }, [filtered, page])
 
     return (
         <div className="space-y-3">
@@ -50,10 +63,10 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                         No headlines match your search.
                     </p>
                 ) : (
-                    filtered.map((n, i) => (
+                    paged.map((n, i) => (
                         <div
                             key={n.id}
-                            className={`flex items-start gap-3 px-4 py-3.5 ${i < filtered.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
+                            className={`flex items-start gap-3 px-4 py-3.5 ${i < paged.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
                         >
                             {n.image_url && (
                                 <img
@@ -103,6 +116,53 @@ export function NewsFeed({ items }: { items: NewsItemRow[] }) {
                     ))
                 )}
             </div>
+
+            {filtered.length > 0 && totalPages > 1 && (
+                <div className="flex items-center justify-between pt-1">
+                    <p className="text-[12px] text-(--color-text-tertiary)">
+                        Page {page} of {totalPages}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="flex h-8 w-8 items-center justify-center rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) text-(--color-text-secondary) transition-colors hover:bg-(--color-background-secondary) disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Previous page"
+                        >
+                            <ChevronLeft size={14} />
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                            .map((p, i, arr) => (
+                                <span key={p} className="flex items-center">
+                                    {i > 0 && arr[i - 1] !== p - 1 && (
+                                        <span className="px-1 text-[12px] text-(--color-text-tertiary)">…</span>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setPage(p)}
+                                        className={`flex h-8 min-w-8 items-center justify-center rounded-(--border-radius-md) px-2 text-[12px] font-medium transition-colors ${p === page
+                                                ? 'bg-(--color-brand) text-[#062012]'
+                                                : 'border-[0.5px] border-(--color-border-secondary) text-(--color-text-secondary) hover:bg-(--color-background-secondary)'
+                                            }`}
+                                    >
+                                        {p}
+                                    </button>
+                                </span>
+                            ))}
+                        <button
+                            type="button"
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="flex h-8 w-8 items-center justify-center rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) text-(--color-text-secondary) transition-colors hover:bg-(--color-background-secondary) disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Next page"
+                        >
+                            <ChevronRight size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
