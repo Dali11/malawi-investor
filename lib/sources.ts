@@ -24,11 +24,11 @@ export const NEWS_SOURCES = [
         feedUrl: 'https://businessmalawi.com/feed',
         isBusinessCategoryFeed: true,
     },
-    {
-        name: 'Malawi Nation',
-        feedUrl: 'https://mwnation.com/feed',
-        isBusinessCategoryFeed: false,
-    },
+    // {
+    //     name: 'Malawi Nation',
+    //     feedUrl: 'https://mwnation.com/feed',
+    //     isBusinessCategoryFeed: false,
+    // },
     // {
     //     name: 'Malawi24',
     //     feedUrl: 'https://malawi24.com/feed',
