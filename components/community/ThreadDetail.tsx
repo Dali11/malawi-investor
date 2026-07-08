@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, MessageCircle, Flag } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { VoteButtons } from '@/components/community/VoteButtons'
+import { Avatar } from '@/components/community/Avatar'
 import { CATEGORY_COLORS, type CommunityReplyRow, type CommunityThreadRow } from '@/types/community'
 import { timeAgo } from '@/lib/timeAgo'
 
@@ -105,12 +106,14 @@ function ReplyNode({
     reply,
     childrenByParent,
     threadId,
+    threadAuthorId,
     isLoggedIn,
     depth,
 }: {
     reply: CommunityReplyRow
     childrenByParent: Map<string | null, CommunityReplyRow[]>
     threadId: string
+    threadAuthorId: string
     isLoggedIn: boolean
     depth: number
 }) {
@@ -118,7 +121,8 @@ function ReplyNode({
     const supabase = createClient()
     const [replying, setReplying] = useState(false)
     const children = childrenByParent.get(reply.id) ?? []
-    const indent = Math.min(depth, MAX_INDENT_DEPTH) * 20
+    const isOp = reply.user_id === threadAuthorId
+    const capped = depth > MAX_INDENT_DEPTH
 
     async function postReply(body: string) {
         const { data: { user } } = await supabase.auth.getUser()
@@ -133,61 +137,89 @@ function ReplyNode({
         router.refresh()
     }
 
-    return (
-        <div style={{ marginLeft: indent }} className="pt-3">
-            <div className="flex gap-3">
-                <VoteButtons
-                    targetType="reply"
-                    targetId={reply.id}
-                    upvotes={reply.upvotes}
-                    downvotes={reply.downvotes}
-                    myVote={reply.my_vote}
-                    isLoggedIn={isLoggedIn}
-                />
-                <div className="min-w-0 flex-1">
-                    <p className="text-[12px] font-medium text-(--color-text-primary)">
-                        {reply.author_name} <span className="font-normal text-(--color-text-tertiary)">· {timeAgo(reply.created_at)}</span>
-                    </p>
-                    <p className="mt-0.5 text-[13px] text-(--color-text-secondary) leading-relaxed whitespace-pre-wrap">{reply.body}</p>
-                    <div className="mt-1.5 flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => (isLoggedIn ? setReplying((r) => !r) : requireLogin(router, window.location.pathname))}
-                            className="border-none p-0 text-[11px] font-medium text-(--color-text-tertiary) hover:text-(--color-text-primary)"
+    const body = (
+        <div className="flex gap-2.5">
+            <Avatar userId={reply.user_id} name={reply.author_name} size={depth === 0 ? 26 : 22} />
+            <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[12px] font-medium text-(--color-text-primary)">{reply.author_name}</span>
+                    {isOp && (
+                        <span
+                            className="rounded-full px-1.5 py-px text-[9px] font-semibold"
+                            style={{ background: 'var(--color-background-warning)', color: 'var(--color-text-warning)' }}
                         >
-                            Reply
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => fileReport(supabase, router, isLoggedIn, window.location.pathname, 'reply', reply.id)}
-                            className="flex items-center gap-1 border-none p-0 text-[11px] text-(--color-text-tertiary) hover:text-(--color-text-primary)"
-                        >
-                            <Flag size={11} aria-hidden="true" /> Report
-                        </button>
-                    </div>
-                    {replying && (
-                        <div className="mt-2">
-                            <ReplyComposer
-                                isLoggedIn={isLoggedIn}
-                                placeholder={`Reply to ${reply.author_name}...`}
-                                onSubmit={postReply}
-                                onCancel={() => setReplying(false)}
-                            />
-                        </div>
+                            OP
+                        </span>
                     )}
+                    <span className="text-[11px] text-(--color-text-tertiary)">· {timeAgo(reply.created_at)}</span>
                 </div>
-            </div>
+                <p className="mt-0.5 text-[13px] text-(--color-text-secondary) leading-relaxed whitespace-pre-wrap">{reply.body}</p>
+                <div className="mt-1.5 flex items-center gap-3">
+                    <VoteButtons
+                        targetType="reply"
+                        targetId={reply.id}
+                        upvotes={reply.upvotes}
+                        downvotes={reply.downvotes}
+                        myVote={reply.my_vote}
+                        isLoggedIn={isLoggedIn}
+                        layout="pill"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => (isLoggedIn ? setReplying((r) => !r) : requireLogin(router, window.location.pathname))}
+                        className="border-none p-0 text-[11px] font-medium text-(--color-text-tertiary) hover:text-(--color-text-primary)"
+                    >
+                        Reply
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => fileReport(supabase, router, isLoggedIn, window.location.pathname, 'reply', reply.id)}
+                        className="flex items-center gap-1 border-none p-0 text-[11px] text-(--color-text-tertiary) hover:text-(--color-text-primary)"
+                    >
+                        <Flag size={11} aria-hidden="true" /> Report
+                    </button>
+                </div>
+                {replying && (
+                    <div className="mt-2">
+                        <ReplyComposer
+                            isLoggedIn={isLoggedIn}
+                            placeholder={`Reply to ${reply.author_name}...`}
+                            onSubmit={postReply}
+                            onCancel={() => setReplying(false)}
+                        />
+                    </div>
+                )}
 
-            {children.map((child) => (
-                <ReplyNode
-                    key={child.id}
-                    reply={child}
-                    childrenByParent={childrenByParent}
-                    threadId={threadId}
-                    isLoggedIn={isLoggedIn}
-                    depth={depth + 1}
-                />
-            ))}
+                {children.map((child) => (
+                    <ReplyNode
+                        key={child.id}
+                        reply={child}
+                        childrenByParent={childrenByParent}
+                        threadId={threadId}
+                        threadAuthorId={threadAuthorId}
+                        isLoggedIn={isLoggedIn}
+                        depth={depth + 1}
+                    />
+                ))}
+            </div>
+        </div>
+    )
+
+    // Top level (depth 0) sits flush under the divider, like a
+    // standalone comment. Deeper replies get a connecting line to the
+    // left so nesting reads visually, not just from indent spacing.
+    // Past MAX_INDENT_DEPTH, stop adding further indent/line (avoids
+    // unreadably narrow columns on long sub-threads) but keep nesting
+    // the data itself — it just renders flush from that point on.
+    if (depth === 0) {
+        return <div className="pt-3.5">{body}</div>
+    }
+    if (capped) {
+        return <div className="pt-3">{body}</div>
+    }
+    return (
+        <div className="mt-3 border-l-2 border-(--color-border-tertiary) pl-3.5">
+            {body}
         </div>
     )
 }
@@ -236,7 +268,21 @@ export function ThreadDetail({
             </Link>
 
             <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) p-4 shadow-(--shadow-card) sm:p-5">
-                <div className="flex gap-3.5">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
+                        style={{ background: colors.bg, color: colors.text }}
+                    >
+                        {thread.category}
+                    </span>
+                    <span className="text-[11px] text-(--color-text-tertiary)">
+                        {thread.author_name} · {timeAgo(thread.created_at)}
+                    </span>
+                </div>
+                <h1 className="text-[17px] font-semibold text-(--color-text-primary) leading-snug">{thread.title}</h1>
+                <p className="mt-2 text-[14px] text-(--color-text-secondary) leading-relaxed whitespace-pre-wrap">{thread.body}</p>
+
+                <div className="mt-4 flex items-center gap-3 border-t-[0.5px] border-(--color-border-tertiary) pt-3 text-[12px] text-(--color-text-tertiary)">
                     <VoteButtons
                         targetType="thread"
                         targetId={thread.id}
@@ -244,35 +290,18 @@ export function ThreadDetail({
                         downvotes={thread.downvotes}
                         myVote={thread.my_vote}
                         isLoggedIn={isLoggedIn}
+                        layout="pill"
                     />
-                    <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                            <span
-                                className="rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
-                                style={{ background: colors.bg, color: colors.text }}
-                            >
-                                {thread.category}
-                            </span>
-                            <span className="text-[11px] text-(--color-text-tertiary)">
-                                {thread.author_name} · {timeAgo(thread.created_at)}
-                            </span>
-                        </div>
-                        <h1 className="text-[17px] font-semibold text-(--color-text-primary) leading-snug">{thread.title}</h1>
-                        <p className="mt-2 text-[14px] text-(--color-text-secondary) leading-relaxed whitespace-pre-wrap">{thread.body}</p>
-
-                        <div className="mt-4 flex items-center gap-4 border-t-[0.5px] border-(--color-border-tertiary) pt-3 text-[12px] text-(--color-text-tertiary)">
-                            <span className="flex items-center gap-1.5">
-                                <MessageCircle size={13} aria-hidden="true" /> {thread.reply_count} replies
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => fileReport(supabase, router, isLoggedIn, window.location.pathname, 'thread', thread.id)}
-                                className="flex items-center gap-1 border-none p-0 text-[12px] text-(--color-text-tertiary) hover:text-(--color-text-primary)"
-                            >
-                                <Flag size={12} aria-hidden="true" /> Report
-                            </button>
-                        </div>
-                    </div>
+                    <span className="flex items-center gap-1.5">
+                        <MessageCircle size={13} aria-hidden="true" /> {thread.reply_count} replies
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => fileReport(supabase, router, isLoggedIn, window.location.pathname, 'thread', thread.id)}
+                        className="flex items-center gap-1 border-none p-0 text-[12px] text-(--color-text-tertiary) hover:text-(--color-text-primary)"
+                    >
+                        <Flag size={12} aria-hidden="true" /> Report
+                    </button>
                 </div>
             </div>
 
@@ -288,6 +317,7 @@ export function ThreadDetail({
                                 reply={reply}
                                 childrenByParent={childrenByParent}
                                 threadId={thread.id}
+                                threadAuthorId={thread.user_id}
                                 isLoggedIn={isLoggedIn}
                                 depth={0}
                             />

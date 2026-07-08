@@ -13,6 +13,7 @@ export function VoteButtons({
     downvotes,
     myVote,
     isLoggedIn,
+    layout = 'vertical',
 }: {
     targetType: 'thread' | 'reply'
     targetId: string
@@ -20,6 +21,7 @@ export function VoteButtons({
     downvotes: number
     myVote: 1 | -1 | null
     isLoggedIn: boolean
+    layout?: 'vertical' | 'pill'
 }) {
     const router = useRouter()
     const supabase = createClient()
@@ -73,6 +75,39 @@ export function VoteButtons({
     }
 
     const score = optimistic.upvotes - optimistic.downvotes
+
+    if (layout === 'pill') {
+        return (
+            <div
+                className="flex items-center gap-1 rounded-full px-2 py-1"
+                style={{ background: 'var(--color-background-secondary)' }}
+            >
+                <button
+                    type="button"
+                    onClick={(e) => vote(1, e)}
+                    aria-label="Upvote"
+                    disabled={pending}
+                    className="border-none bg-transparent p-0"
+                    style={{ color: optimistic.myVote === 1 ? 'var(--color-text-warning)' : 'var(--color-text-tertiary)' }}
+                >
+                    <ChevronUp size={15} />
+                </button>
+                <span className="min-w-[1ch] text-center text-[12px] font-semibold text-(--color-text-primary) font-(family-name:--font-mono)">
+                    {score}
+                </span>
+                <button
+                    type="button"
+                    onClick={(e) => vote(-1, e)}
+                    aria-label="Downvote"
+                    disabled={pending}
+                    className="border-none bg-transparent p-0"
+                    style={{ color: optimistic.myVote === -1 ? 'var(--color-text-danger)' : 'var(--color-text-tertiary)' }}
+                >
+                    <ChevronDown size={15} />
+                </button>
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col items-center gap-0.5 pt-0.5" style={{ minWidth: 28 }}>
