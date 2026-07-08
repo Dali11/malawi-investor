@@ -1,7 +1,7 @@
 // components/community/ThreadDetail.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, MessageCircle, Flag } from 'lucide-react'
@@ -244,6 +244,39 @@ export function ThreadDetail({
         childrenByParent.get(key)!.push(r)
     }
     const topLevel = childrenByParent.get(null) ?? []
+
+    // Live updates: new replies, vote count changes, or moderation
+    // status changes on this thread (from any device/session) refresh
+    // the page's data without the viewer needing to reload manually.
+    // Debounced since a vote and a reply can land in the same instant
+    // and each would otherwise trigger its own refresh.
+    useEffect(() => {
+        let timeout: ReturnType<typeof setTimeout> | null = null
+        const scheduleRefresh = () => {
+            if (timeout) clearTimeout(timeout)
+            timeout = setTimeout(() => router.refresh(), 400)
+        }
+
+        const channel = supabase
+            .channel(`thread-${thread.id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'community_replies', filter: `thread_id=eq.${thread.id}` },
+                scheduleRefresh,
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'community_threads', filter: `id=eq.${thread.id}` },
+                scheduleRefresh,
+            )
+            .subscribe()
+
+        return () => {
+            if (timeout) clearTimeout(timeout)
+            supabase.removeChannel(channel)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [thread.id])
 
     async function postTopLevelReply(body: string) {
         const { data: { user } } = await supabase.auth.getUser()
