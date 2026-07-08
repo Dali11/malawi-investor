@@ -143,6 +143,24 @@ export default function NewsAdminPage() {
         }
     }
 
+    const [recategorizing, setRecategorizing] = useState(false)
+    const [recategorizeResult, setRecategorizeResult] = useState<{ updated: number; unchanged: number; errors: string[] } | null>(null)
+
+    async function handleRecategorize() {
+        setRecategorizing(true)
+        setRecategorizeResult(null)
+        try {
+            const res = await fetch('/api/admin/recategorize-news', { method: 'POST' })
+            const data = await res.json()
+            setRecategorizeResult(data)
+            loadRecent()
+        } catch (e: any) {
+            setRecategorizeResult({ updated: 0, unchanged: 0, errors: [e.message ?? 'Request failed'] })
+        } finally {
+            setRecategorizing(false)
+        }
+    }
+
     async function handleDelete(id: number) {
         await supabase.from('news_items').delete().eq('id', id)
         loadRecent()
@@ -194,6 +212,27 @@ export default function NewsAdminPage() {
                 <p className="mt-2 text-[12px] text-gray-500">
                     {refreshResult.updated} updated, {refreshResult.unchanged} left as-is
                     {refreshResult.errors.length > 0 && ` · ${refreshResult.errors.join('; ')}`}
+                </p>
+            )}
+
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
+                <div>
+                    <p className="text-[13px] font-medium text-gray-900">Recategorize</p>
+                    <p className="text-[12px] text-gray-500">Re-sorts existing headlines using the latest keyword rules.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleRecategorize}
+                    disabled={recategorizing}
+                    className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-[13px] font-medium text-gray-900 disabled:opacity-50"
+                >
+                    {recategorizing ? 'Recategorizing…' : 'Recategorize'}
+                </button>
+            </div>
+            {recategorizeResult && (
+                <p className="mt-2 text-[12px] text-gray-500">
+                    {recategorizeResult.updated} updated, {recategorizeResult.unchanged} left as-is
+                    {recategorizeResult.errors.length > 0 && ` · ${recategorizeResult.errors.join('; ')}`}
                 </p>
             )}
 
@@ -263,6 +302,8 @@ export default function NewsAdminPage() {
                     >
                         <option>Market News</option>
                         <option>Company News</option>
+                        <option>Stocks</option>
+                        <option>Bonds</option>
                         <option>Economy</option>
                         <option>IPOs & Corporate Actions</option>
                     </select>

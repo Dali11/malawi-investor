@@ -10,8 +10,10 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { excerpt, fetchArticleImage, parseRssFeed } from '@/lib/rss'
+import { categorizeHeadline } from '@/lib/news/categorize'
 import { NEWS_SOURCES } from '@/lib/sources'
+import { excerpt, fetchArticleImage, parseRssFeed } from '@/lib/rss'
+
 
 const MAX_PER_SOURCE = 10
 
@@ -63,12 +65,13 @@ export async function POST() {
                 }
 
                 const imageUrl = item.imageUrl ?? (await fetchArticleImage(item.link))
+                const summary = item.description ? excerpt(item.description) : null
 
                 const { error } = await supabase.from('news_items').insert({
                     counter_id: null,
-                    category: 'Market News',
+                    category: categorizeHeadline(item.title, summary),
                     headline: item.title,
-                    summary: item.description ? excerpt(item.description) : null,
+                    summary,
                     source_name: source.name,
                     source_url: link,
                     published_at: (item.publishedAt ?? new Date().toISOString()).slice(0, 10),
