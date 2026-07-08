@@ -15,7 +15,7 @@
 
 'use client'
 
-import { useState, useEffect, useCallback, type DragEvent } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { RichTextEditor } from '@/components/admin/RichTextEditor'
@@ -48,10 +48,7 @@ export default function AnalysisAdminPage() {
     const [counterId, setCounterId] = useState('')
     const [category, setCategory] = useState<AnalysisCategory>('latest')
     const [content, setContent] = useState(EMPTY_CONTENT)
-    const [imageFile, setImageFile] = useState<File | null>(null)
-    const [imagePreview, setImagePreview] = useState<string | null>(null)
-    const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null)
-    const [dragActive, setDragActive] = useState(false)
+    const [imageUrl, setImageUrl] = useState('')
     const [priceAtPost, setPriceAtPost] = useState('')
     const [peAtPost, setPeAtPost] = useState('')
     const [marketCapAtPost, setMarketCapAtPost] = useState('')
@@ -59,17 +56,8 @@ export default function AnalysisAdminPage() {
 
     const [loading, setLoading] = useState(false)
     const [fetchingSnapshot, setFetchingSnapshot] = useState(false)
-    const [uploadingImage, setUploadingImage] = useState(false)
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState<string | null>(null)
-
-    // Who's actually logged in right now — this is who gets stamped as
-    // the author on brand-new posts. If this is null, nobody is signed
-    // in with a Supabase session, so author_id can NOT be set no matter
-    // what the form does. See the banner rendered below the header.
-    const [currentUser, setCurrentUser] = useState<{ id: string; email: string | null } | null>(null)
-    const [currentUserName, setCurrentUserName] = useState<string | null>(null)
-    const [checkingAuth, setCheckingAuth] = useState(true)
 
     const supabase = createClient()
 
@@ -87,21 +75,6 @@ export default function AnalysisAdminPage() {
             if (data) setCounters(data)
         })
         loadRecent()
-
-        // Figure out who's logged in (if anyone) so we can show
-        // "Publishing as ___" and actually stamp author_id correctly.
-        supabase.auth.getUser().then(async ({ data: { user } }) => {
-            setCurrentUser(user ? { id: user.id, email: user.email ?? null } : null)
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('id', user.id)
-                    .maybeSingle()
-                setCurrentUserName(profile?.full_name ?? user.email ?? null)
-            }
-            setCheckingAuth(false)
-        })
     }, [supabase, loadRecent])
 
     function resetForm() {
@@ -110,37 +83,11 @@ export default function AnalysisAdminPage() {
         setCounterId('')
         setCategory('latest')
         setContent(EMPTY_CONTENT)
-        handleImageSelect(null)
-        setExistingImageUrl(null)
+        setImageUrl('')
         setPriceAtPost('')
         setPeAtPost('')
         setMarketCapAtPost('')
         setPublished(false)
-    }
-
-    function handleImageSelect(file: File | null) {
-        setImageFile(file)
-        setImagePreview(file ? URL.createObjectURL(file) : null)
-        if (file) setExistingImageUrl(null)
-    }
-
-    function handleDrop(e: DragEvent<HTMLLabelElement>) {
-        e.preventDefault()
-        setDragActive(false)
-        const file = e.dataTransfer.files?.[0]
-        if (file && file.type.startsWith('image/')) handleImageSelect(file)
-    }
-
-    async function uploadImage(): Promise<string | null> {
-        if (!imageFile) return null
-        const ext = imageFile.name.split('.').pop()
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-        const { error: uploadError } = await supabase.storage
-            .from('analysis-images')
-            .upload(path, imageFile, { cacheControl: '3600', upsert: false })
-        if (uploadError) throw uploadError
-        const { data } = supabase.storage.from('analysis-images').getPublicUrl(path)
-        return data.publicUrl
     }
 
     // Pulls the counter's latest known price/P-E/market cap from
@@ -192,8 +139,7 @@ export default function AnalysisAdminPage() {
         setCounterId(data.counter_id != null ? String(data.counter_id) : '')
         setCategory((data.category as AnalysisCategory) ?? 'latest')
         setContent(data.content || EMPTY_CONTENT)
-        handleImageSelect(null)
-        setExistingImageUrl(data.image_url ?? null)
+        setImageUrl(data.image_url ?? '')
         setPriceAtPost(data.price_at_post != null ? String(data.price_at_post) : '')
         setPeAtPost(data.pe_at_post != null ? String(data.pe_at_post) : '')
         setMarketCapAtPost(data.market_cap_at_post != null ? String(data.market_cap_at_post) : '')
@@ -209,41 +155,16 @@ export default function AnalysisAdminPage() {
         }
         setLoading(true); setError(null); setSuccess(false)
         try {
-            let imageUrl: string | null = existingImageUrl
-            if (imageFile) {
-                setUploadingImage(true)
-                imageUrl = await uploadImage()
-                setUploadingImage(false)
-            }
-            const payload: Record<string, unknown> = {
+            const payload = {
                 title: title.trim(),
                 counter_id: counterId ? parseInt(counterId) : null,
                 category,
                 content,
-                image_url: imageUrl,
+                image_url: imageUrl.trim() || null,
                 price_at_post: priceAtPost ? parseFloat(priceAtPost) : null,
                 pe_at_post: peAtPost ? parseFloat(peAtPost) : null,
                 market_cap_at_post: marketCapAtPost ? parseFloat(marketCapAtPost) : null,
                 published,
-            }
-
-            // Only stamp the author on brand-new posts. Editing an existing
-            // analysis shouldn't reassign it to whoever happens to be logged
-            // in when they hit "Update" — the byline should stay with
-            // whoever originally published it. This re-checks the session
-            // right before saving (rather than trusting the state set on
-            // page load) in case it changed or expired mid-edit.
-            if (!editingId) {
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    payload.author_id = user.id
-                } else {
-                    // No session at all — this is exactly the situation that
-                    // caused the byline to silently fall back to a generic
-                    // name before. Surface it instead of publishing silently
-                    // unattributed.
-                    setError('You are not signed in, so this post will be published without an author. Sign in first if you want your name attached.')
-                }
             }
 
             const { error: writeError } = editingId
@@ -258,7 +179,6 @@ export default function AnalysisAdminPage() {
             setError(e.message ?? 'Failed to save')
         } finally {
             setLoading(false)
-            setUploadingImage(false)
         }
     }
 
@@ -289,24 +209,10 @@ export default function AnalysisAdminPage() {
                         <Link href="/admin/news" className="text-gray-500 hover:text-gray-900">News</Link>
                         <Link href="/admin/ipos" className="text-gray-500 hover:text-gray-900">IPOs</Link>
                         <Link href="/admin/corporate-actions" className="text-gray-500 hover:text-gray-900">Corporate Actions</Link>
+                        <Link href="/admin/community" className="text-gray-500 hover:text-gray-900">Community Reports</Link>
                     </div>
                 </div>
             </div>
-
-            {/* Who you're posting as — makes the author_id behavior visible
-                instead of it silently succeeding or silently failing. */}
-            {!checkingAuth && (
-                currentUser ? (
-                    <div className="mt-4 rounded-md bg-green-50 px-3 py-2 text-[12px] text-green-800">
-                        Publishing as <strong>{currentUserName ?? currentUser.email}</strong>
-                    </div>
-                ) : (
-                    <div className="mt-4 rounded-md bg-red-50 px-3 py-2 text-[12px] text-red-800">
-                        Not signed in — new posts will be published with no author.{' '}
-                        <Link href="/login" className="font-semibold underline">Sign in</Link>
-                    </div>
-                )
-            )}
 
             <div className="mt-6 flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-5">
                 {editingId && (
@@ -372,49 +278,18 @@ export default function AnalysisAdminPage() {
                     <RichTextEditor content={content} onChange={setContent} />
                 </div>
 
-                {/* Cover image */}
+                {/* Image URL */}
                 <div>
                     <label className="mb-1 block text-[12px] font-medium text-gray-600">
-                        Cover image <span className="text-gray-400">(optional)</span>
+                        Cover image URL <span className="text-gray-400">(optional)</span>
                     </label>
-                    {imagePreview || existingImageUrl ? (
-                        <div className="flex items-center gap-3">
-                            <img
-                                src={imagePreview ?? existingImageUrl ?? ''}
-                                alt=""
-                                className="h-20 w-20 rounded-lg object-cover"
-                            />
-                            <div className="flex flex-col items-start gap-1">
-                                {imageFile && <span className="text-[11px] text-gray-500">{imageFile.name}</span>}
-                                <button
-                                    type="button"
-                                    onClick={() => { handleImageSelect(null); setExistingImageUrl(null) }}
-                                    className="cursor-pointer border-none bg-transparent text-[12px] text-gray-500 hover:text-red-600"
-                                >
-                                    Remove
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <label
-                            onDragOver={e => { e.preventDefault(); setDragActive(true) }}
-                            onDragLeave={() => setDragActive(false)}
-                            onDrop={handleDrop}
-                            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-3 py-6 text-center transition-colors ${dragActive ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                                }`}
-                        >
-                            <span className="text-[12px] font-medium text-gray-600">
-                                Drag & drop a photo, or click to choose
-                            </span>
-                            <span className="text-[11px] text-gray-400">PNG or JPG</span>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={e => handleImageSelect(e.target.files?.[0] ?? null)}
-                                className="hidden"
-                            />
-                        </label>
-                    )}
+                    <input
+                        type="url"
+                        value={imageUrl}
+                        onChange={e => setImageUrl(e.target.value)}
+                        placeholder="https://…"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-[13px] text-gray-900 outline-none focus:border-amber-400"
+                    />
                 </div>
 
                 {/* Snapshot stats */}
@@ -488,9 +363,7 @@ export default function AnalysisAdminPage() {
                         disabled={loading}
                         className="cursor-pointer rounded-lg border-none bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
                     >
-                        {loading
-                            ? (uploadingImage ? 'Uploading photo…' : 'Saving…')
-                            : editingId ? 'Update analysis' : published ? 'Publish analysis' : 'Save draft'}
+                        {loading ? 'Saving…' : editingId ? 'Update analysis' : published ? 'Publish analysis' : 'Save draft'}
                     </button>
                     {editingId && (
                         <button
