@@ -31,7 +31,7 @@ export default function NewsAdminPage() {
     function loadRecent() {
         supabase
             .from('news_items')
-            .select('id, headline, source_name, published_at, image_url, mse_counters(symbol)')
+            .select('id, headline, source_name, published_at, image_url, category, mse_counters(symbol)')
             .order('created_at', { ascending: false })
             .limit(15)
             .then(({ data }) => { if (data) setRecent(data) })
@@ -388,7 +388,7 @@ export default function NewsAdminPage() {
                                     <div className="min-w-0">
                                         <p className="truncate text-[12px] text-gray-900">{r.headline}</p>
                                         <p className="text-[11px] text-gray-400">
-                                            {r.mse_counters?.symbol ?? 'General'} · {r.source_name ?? 'No source'} · {r.published_at}
+                                            {r.category ?? 'Uncategorized'} · {r.mse_counters?.symbol ?? 'General'} · {r.source_name ?? 'No source'} · {r.published_at}
                                         </p>
                                     </div>
                                 </div>

@@ -40,3 +40,27 @@ export function categorizeHeadline(headline: string, summary?: string | null): s
     // most Nyasa Times business-desk headlines are about a specific firm.
     return 'Company News'
 }
+
+const RELEVANCE_KEYWORDS = [
+    // Finance/markets terms specific enough to rarely false-positive
+    'kwacha', 'dividend', 'ipo', 'inflation', 'gdp', 'forex', 'foreign exchange',
+    'insurer', 'insurance', 'plc', 'agm', 'earnings', 'profit', 'revenue',
+    'conglomerate', 'mse', 'rbm', 'reserve bank', 'exchange rate', 'monetary policy',
+    'interest rate', 'tax', 'budget', 'mining', 'listed on', 'delisted', 'delisting',
+    'shareholder', 'share price', 'stock price', 'share capital', 'stock exchange',
+    'stock market', 'money market', 'capital markets', 'treasury bond', 'treasury note',
+    'bond yield', 'bond auction', 'government bond', 'trade deficit', 'trade balance',
+    'foreign trade', 'export earnings', 'import bill', 'buyback', 'rights issue',
+    'financial results', 'annual report', 'quarterly results', 'loan facility',
+    'credit rating', 'foreign direct investment',
+]
+
+/**
+ * Used only for general (non-business-scoped) feed sources — filters
+ * out politics/sports/entertainment noise so only finance-flavored
+ * headlines make it into news_items.
+ */
+export function isBusinessRelevant(headline: string, summary?: string | null): boolean {
+    const text = `${headline} ${summary ?? ''}`.toLowerCase()
+    return RELEVANCE_KEYWORDS.some((k) => text.includes(k))
+}
