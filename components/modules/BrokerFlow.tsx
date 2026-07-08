@@ -51,11 +51,11 @@ export default function BrokerFlow({ lang = 'en' }: { lang?: LearnLang }) {
 
     return (
         <div className="rounded-xl border border-(--color-border-tertiary) bg-(--color-background-secondary) p-5 my-6">
-            <div className="flex flex-wrap items-stretch justify-center gap-2 mb-6">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch justify-center gap-2 mb-6">
                 {t.steps.map((step, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={i} className="flex flex-col sm:flex-row items-center gap-2">
                         <div
-                            className="rounded-lg px-3 py-2.5 min-w-[110px] text-center"
+                            className="rounded-lg px-3 py-2.5 w-full sm:w-auto sm:min-w-[110px] text-center"
                             style={{
                                 background: step.highlight
                                     ? 'var(--color-background-success)'
@@ -69,7 +69,7 @@ export default function BrokerFlow({ lang = 'en' }: { lang?: LearnLang }) {
                             <p className="text-xs text-(--color-text-secondary) mt-0.5">{step.subtitle}</p>
                         </div>
                         {i < t.steps.length - 1 && (
-                            <span className="text-(--color-text-tertiary) text-lg" aria-hidden="true">→</span>
+                            <span className="text-(--color-text-tertiary) text-lg rotate-90 sm:rotate-0" aria-hidden="true">→</span>
                         )}
                     </div>
                 ))}
