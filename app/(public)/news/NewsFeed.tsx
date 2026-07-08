@@ -40,6 +40,11 @@ function NewsCard({ n }: { n: NewsItemRow }) {
                 <p className="mt-1 text-[14px] leading-snug font-semibold text-(--color-text-primary) line-clamp-3">
                     {n.headline}
                 </p>
+                {n.summary && (
+                    <p className="mt-1.5 text-[12px] leading-snug text-(--color-text-secondary) line-clamp-2">
+                        {n.summary}
+                    </p>
+                )}
                 <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[11px] text-(--color-text-tertiary)">
                     {n.symbol && (
                         <>
