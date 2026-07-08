@@ -1,22 +1,16 @@
 'use client'
 import { useState } from 'react'
-import TickerDemo from './TickerDemo'
+import TickerDemo, { type FrozenStock } from './TickerDemo'
 import TickerQuiz from './TickerQuiz'
+import type { LearnLang } from '@/lib/i18n/learn-dict'
 
-type Stock = {
-    symbol: string
-    price: number
-    change: number
-    volume: number
-}
-
-export default function TickerModuleSection({ onCorrect }: { onCorrect: () => void }) {
-    const [frozenStocks, setFrozenStocks] = useState<Stock[] | null>(null)
+export default function TickerModuleSection({ onCorrect, lang = 'en' }: { onCorrect: () => void; lang?: LearnLang }) {
+    const [frozenStock, setFrozenStock] = useState<FrozenStock | null>(null)
 
     return (
         <>
-            <TickerDemo onFrozen={setFrozenStocks} />
-            <TickerQuiz stocks={frozenStocks} onCorrect={onCorrect} />
+            <TickerDemo lang={lang} onFrozen={setFrozenStock} />
+            <TickerQuiz stock={frozenStock} lang={lang} onCorrect={onCorrect} />
         </>
     )
 }

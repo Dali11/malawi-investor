@@ -41,12 +41,17 @@ export default function ModuleCompletion({
                 <button
                     type="submit"
                     disabled={isCompleted || (hasGate && !unlocked)}
-                    className={`w-full text-sm font-medium py-2 rounded-lg transition-colors disabled:cursor-not-allowed ${isCompleted
-                        ? 'bg-green-600 text-white'
-                        : unlocked || !hasGate
-                            ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                            : 'bg-gray-200 text-gray-400'
-                        }`}
+                    className="w-full text-sm font-medium py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
+                    style={{
+                        background: isCompleted
+                            ? 'var(--color-text-success)'
+                            : unlocked || !hasGate
+                                ? 'var(--color-brand)'
+                                : 'var(--color-background-tertiary)',
+                        color: isCompleted || unlocked || !hasGate
+                            ? '#062012'
+                            : 'var(--color-text-tertiary)',
+                    }}
                 >
                     {isCompleted ? t.completed : t.markComplete}
                 </button>

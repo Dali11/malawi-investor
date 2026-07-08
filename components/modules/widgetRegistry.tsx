@@ -17,7 +17,7 @@ export const widgetRegistry: Record<string, WidgetEntry> = {
     },
     ticker_demo: {
         gatesCompletion: true,
-        render: ({ onCorrect }) => <TickerModuleSection onCorrect={onCorrect} />,
+        render: ({ onCorrect, lang }) => <TickerModuleSection onCorrect={onCorrect} lang={lang} />,
     },
     ownership_grid: {
         gatesCompletion: false,
