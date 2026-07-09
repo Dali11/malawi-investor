@@ -21,6 +21,7 @@ import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react'
 import { CounterOverviewTabs } from '@/components/markets/CounterOverviewTabs'
 import { WatchlistButton } from '@/components/watchlist/WatchlistButton'
+import { PriceAlertButton } from '@/components/watchlist/PriceAlertButton'
 
 export const revalidate = 3600
 
@@ -85,6 +86,7 @@ export default async function CounterPage({
     if (!counter) notFound()
 
     let isWatched = false
+    let activeAlerts: { id: string; target_price: number; direction: 'above' | 'below' }[] = []
     if (user) {
         const { data: watchRow } = await sessionClient
             .from('watchlist_items')
@@ -93,6 +95,18 @@ export default async function CounterPage({
             .eq('counter_id', counter.id)
             .maybeSingle()
         isWatched = !!watchRow
+
+        const { data: alertRows } = await sessionClient
+            .from('price_alerts')
+            .select('id, target_price, direction')
+            .eq('user_id', user.id)
+            .eq('counter_id', counter.id)
+            .eq('status', 'active')
+        activeAlerts = (alertRows ?? []).map((a) => ({
+            id: a.id,
+            target_price: Number(a.target_price),
+            direction: a.direction as 'above' | 'below',
+        }))
     }
 
     // Latest two price rows: [0] = today/most recent, [1] = previous
@@ -108,7 +122,9 @@ export default async function CounterPage({
     const latest = priceRows?.[0]
     const previous = priceRows?.[1]
 
-
+    // Slow-changing fundamentals (EPS, DPS, dividend yield, shares
+    // outstanding) — overwritten in place by the scraper, one row per
+    // counter, not a daily history.
     const { data: fundamentals } = await supabase
         .from('mse_fundamentals')
         .select('eps, dps, dividend_yield, shares_outstanding')
@@ -237,6 +253,13 @@ export default async function CounterPage({
                     </div>
                 )}
             </div>
+
+            <PriceAlertButton
+                counterId={counter.id}
+                symbol={counter.symbol}
+                isLoggedIn={!!user}
+                initialAlerts={activeAlerts}
+            />
 
             <CounterOverviewTabs
                 symbol={counter.symbol}
