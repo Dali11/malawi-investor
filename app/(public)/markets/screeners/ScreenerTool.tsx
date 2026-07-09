@@ -204,6 +204,8 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
     const hydrated = useRef(false)
+    const sectorMenuRef = useRef<HTMLDivElement>(null)
+    const colMenuRef = useRef<HTMLDivElement>(null)
 
     // ---- hydrate filter state from the URL on first mount ----
     // Deliberately an effect, not a lazy useState initializer: this page is
@@ -246,6 +248,34 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
         const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname
         window.history.replaceState(null, '', url)
     }, [selectedSectors, bounds, sortKey, sortDir])
+
+    // ---- close the sector/column dropdowns on outside click or Escape ----
+    useEffect(() => {
+        if (!sectorMenuOpen && !colMenuOpen) return
+
+        function handlePointerDown(e: PointerEvent) {
+            const target = e.target as Node
+            if (sectorMenuOpen && sectorMenuRef.current && !sectorMenuRef.current.contains(target)) {
+                setSectorMenuOpen(false)
+            }
+            if (colMenuOpen && colMenuRef.current && !colMenuRef.current.contains(target)) {
+                setColMenuOpen(false)
+            }
+        }
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === 'Escape') {
+                setSectorMenuOpen(false)
+                setColMenuOpen(false)
+            }
+        }
+
+        document.addEventListener('pointerdown', handlePointerDown)
+        document.addEventListener('keydown', handleKeyDown)
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown)
+            document.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [sectorMenuOpen, colMenuOpen])
 
     function setBound(key: keyof Bounds, value: string) {
         setBounds(b => ({ ...b, [key]: value }))
@@ -433,7 +463,7 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
                     label={copyState === 'copied' ? 'Link copied' : 'Copy link'}
                     onClick={copyLink}
                 />
-                <div className="relative ml-auto">
+                <div className="relative ml-auto" ref={colMenuRef}>
                     <ToolbarButton
                         icon={<Columns3 size={13} />}
                         label="Columns"
@@ -512,7 +542,7 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
                                 </button>
                             </span>
                         ))}
-                        <div className="relative">
+                        <div className="relative" ref={sectorMenuRef}>
                             <button
                                 type="button"
                                 onClick={() => setSectorMenuOpen(v => !v)}
