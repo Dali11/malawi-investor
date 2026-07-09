@@ -108,9 +108,7 @@ export default async function CounterPage({
     const latest = priceRows?.[0]
     const previous = priceRows?.[1]
 
-    // Slow-changing fundamentals (EPS, DPS, dividend yield, shares
-    // outstanding) — overwritten in place by the scraper, one row per
-    // counter, not a daily history.
+
     const { data: fundamentals } = await supabase
         .from('mse_fundamentals')
         .select('eps, dps, dividend_yield, shares_outstanding')
@@ -156,7 +154,7 @@ export default async function CounterPage({
 
     const { data: rawNews } = await supabase
         .from('news_items')
-        .select('headline, summary, source_name, source_url, published_at')
+        .select('headline, summary, source_name, source_url, published_at, image_url')
         .eq('counter_id', counter.id)
         .order('published_at', { ascending: false })
         .limit(50)
