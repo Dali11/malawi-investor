@@ -1,9 +1,9 @@
 // app/(public)/markets/screeners/page.tsx
-// Filter MSE-listed stocks by sector, price, performance, P/E and market
-// cap. Data fetch mirrors the stocks page exactly (latest price per
-// counter + 52-week high/low from history) — filtering itself happens
-// client-side in ScreenerTool since the full counter list is small
-// enough to ship in one payload.
+// Filter MSE-listed stocks by sector, price, performance, P/E, market
+// cap, 52-week range and (soon) dividend yield. Data fetch mirrors the
+// stocks page exactly (latest price per counter + 52-week high/low from
+// history) — filtering itself happens client-side in ScreenerTool since
+// the full counter list is small enough to ship in one payload.
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { ScreenerTool } from './ScreenerTool'
@@ -56,7 +56,13 @@ export default async function ScreenersPage() {
         }
     }
 
-    // 3. Shape data for the client component
+    // 3. TODO(dividend-yield): once the corporate-actions scraper is back on
+    // config-driven IR-page ingestion, join trailing-12-month dividends per
+    // counter here and compute yield = ttm_dividends / price * 100. Wire the
+    // result into the `dividend_yield` field below — the ScreenerTool UI
+    // (filter, column, presets) already expects it and needs no changes.
+
+    // 4. Shape data for the client component
     const stocks = latest
         .filter((p: any) => p.mse_counters?.symbol)
         .map((p: any) => {
@@ -71,6 +77,7 @@ export default async function ScreenersPage() {
                 market_cap: p.market_cap != null ? Number(p.market_cap) : null,
                 week52_high: range?.high ?? null,
                 week52_low: range?.low ?? null,
+                dividend_yield: null as number | null, // stubbed until corporate-actions pipeline lands
             }
         })
         .sort((a, b) => a.symbol.localeCompare(b.symbol))
@@ -80,7 +87,7 @@ export default async function ScreenersPage() {
             <div>
                 <h1 className="text-[20px] font-semibold text-(--color-text-primary)">Screeners</h1>
                 <p className="mt-0.5 text-[13px] text-(--color-text-tertiary)">
-                    Filter all {stocks.length} MSE-listed counters by sector, price, performance, P/E and market cap
+                    Filter all {stocks.length} MSE-listed counters by sector, price, performance, P/E, market cap and 52-week range
                 </p>
             </div>
 
