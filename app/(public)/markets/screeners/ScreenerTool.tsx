@@ -195,6 +195,7 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
 
     const [selectedSectors, setSelectedSectors] = useState<string[]>([])
     const [sectorMenuOpen, setSectorMenuOpen] = useState(false)
+    const [filtersOpen, setFiltersOpen] = useState(false) // collapsed by default on mobile; always expanded from sm: up
     const [bounds, setBounds] = useState<Bounds>(EMPTY_BOUNDS)
     const [sortKey, setSortKey] = useState<SortKey>('symbol')
     const [sortDir, setSortDir] = useState<SortDir>('asc')
@@ -511,112 +512,125 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
 
             {/* Filter panel */}
             <div className="rounded-(--border-radius-lg) border-[0.5px] border-(--color-border-tertiary) bg-(--color-background-primary) p-3.5 shadow-(--shadow-card)">
-                <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-(--color-text-tertiary)">
+                <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setFiltersOpen(v => !v)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFiltersOpen(v => !v) } }}
+                    aria-expanded={filtersOpen}
+                    className="flex w-full items-center justify-between gap-2 cursor-pointer sm:cursor-default"
+                >
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-(--color-text-tertiary)">
+                        <ChevronDown
+                            size={13}
+                            className={`transition-transform sm:hidden ${filtersOpen ? 'rotate-180' : ''}`}
+                        />
                         Filters {activeFilterCount > 0 && `(${activeFilterCount} active)`}
-                    </p>
+                    </span>
                     {activeFilterCount > 0 && (
                         <button
                             type="button"
-                            onClick={resetFilters}
-                            className="inline-flex items-center gap-1 cursor-pointer border-none bg-transparent text-[11px] font-medium text-(--color-text-tertiary) hover:text-(--color-text-primary)"
+                            onClick={e => { e.stopPropagation(); resetFilters() }}
+                            className="inline-flex items-center gap-1 cursor-pointer border-none bg-transparent p-0 text-[11px] font-medium text-(--color-text-tertiary) hover:text-(--color-text-primary)"
                         >
                             <RotateCcw size={11} /> Reset
                         </button>
                     )}
                 </div>
 
-                {/* Sector multi-select */}
-                <div className="mt-3">
-                    <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Sector</label>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                        {selectedSectors.map(s => (
-                            <span
-                                key={s}
-                                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium"
-                                style={{ background: 'var(--color-background-info)', color: 'var(--color-text-info)' }}
-                            >
-                                {s}
-                                <button type="button" onClick={() => toggleSector(s)} aria-label={`Remove ${s}`} className="cursor-pointer border-none bg-transparent p-0 leading-none">
-                                    <X size={11} />
+                <div className={`${filtersOpen ? 'block' : 'hidden'} sm:block`}>
+                    {/* Sector multi-select */}
+                    <div className="mt-3">
+                        <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Sector</label>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {selectedSectors.map(s => (
+                                <span
+                                    key={s}
+                                    className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                                    style={{ background: 'var(--color-background-info)', color: 'var(--color-text-info)' }}
+                                >
+                                    {s}
+                                    <button type="button" onClick={() => toggleSector(s)} aria-label={`Remove ${s}`} className="cursor-pointer border-none bg-transparent p-0 leading-none">
+                                        <X size={11} />
+                                    </button>
+                                </span>
+                            ))}
+                            <div className="relative" ref={sectorMenuRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setSectorMenuOpen(v => !v)}
+                                    className="rounded-full px-2.5 py-1 text-[11px] font-medium border-[0.5px] cursor-pointer"
+                                    style={{ borderColor: 'var(--color-border-secondary)', color: 'var(--color-text-tertiary)' }}
+                                >
+                                    + Add sector
                                 </button>
-                            </span>
-                        ))}
-                        <div className="relative" ref={sectorMenuRef}>
-                            <button
-                                type="button"
-                                onClick={() => setSectorMenuOpen(v => !v)}
-                                className="rounded-full px-2.5 py-1 text-[11px] font-medium border-[0.5px] cursor-pointer"
-                                style={{ borderColor: 'var(--color-border-secondary)', color: 'var(--color-text-tertiary)' }}
-                            >
-                                + Add sector
-                            </button>
-                            {sectorMenuOpen && (
-                                <div className="absolute left-0 z-10 mt-1.5 max-h-56 w-48 overflow-y-auto rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) bg-(--color-background-primary) p-1.5 shadow-(--shadow-card)">
-                                    {sectors.map(s => (
-                                        <label key={s} className="flex items-center gap-2 px-1.5 py-1 text-[12px] text-(--color-text-secondary) cursor-pointer">
-                                            <input type="checkbox" checked={selectedSectors.includes(s)} onChange={() => toggleSector(s)} />
-                                            {s}
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                    {/* Price */}
-                    <div>
-                        <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Price (MK)</label>
-                        <div className="flex gap-1.5">
-                            <NumberField label="Min price" placeholder="Min" value={bounds.priceMin} onChange={v => setBound('priceMin', v)} />
-                            <NumberField label="Max price" placeholder="Max" value={bounds.priceMax} onChange={v => setBound('priceMax', v)} />
+                                {sectorMenuOpen && (
+                                    <div className="absolute left-0 z-10 mt-1.5 max-h-56 w-48 overflow-y-auto rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) bg-(--color-background-primary) p-1.5 shadow-(--shadow-card)">
+                                        {sectors.map(s => (
+                                            <label key={s} className="flex items-center gap-2 px-1.5 py-1 text-[12px] text-(--color-text-secondary) cursor-pointer">
+                                                <input type="checkbox" checked={selectedSectors.includes(s)} onChange={() => toggleSector(s)} />
+                                                {s}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Change % */}
-                    <div>
-                        <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Change %</label>
-                        <div className="flex gap-1.5">
-                            <NumberField label="Min change" placeholder="Min" value={bounds.change_pctMin} onChange={v => setBound('change_pctMin', v)} />
-                            <NumberField label="Max change" placeholder="Max" value={bounds.change_pctMax} onChange={v => setBound('change_pctMax', v)} />
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        {/* Price */}
+                        <div>
+                            <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Price (MK)</label>
+                            <div className="flex gap-1.5">
+                                <NumberField label="Min price" placeholder="Min" value={bounds.priceMin} onChange={v => setBound('priceMin', v)} />
+                                <NumberField label="Max price" placeholder="Max" value={bounds.priceMax} onChange={v => setBound('priceMax', v)} />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* P/E */}
-                    <div>
-                        <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">P/E ratio</label>
-                        <div className="flex gap-1.5">
-                            <NumberField label="Min P/E" placeholder="Min" value={bounds.pe_ratioMin} onChange={v => setBound('pe_ratioMin', v)} />
-                            <NumberField label="Max P/E" placeholder="Max" value={bounds.pe_ratioMax} onChange={v => setBound('pe_ratioMax', v)} />
+                        {/* Change % */}
+                        <div>
+                            <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Change %</label>
+                            <div className="flex gap-1.5">
+                                <NumberField label="Min change" placeholder="Min" value={bounds.change_pctMin} onChange={v => setBound('change_pctMin', v)} />
+                                <NumberField label="Max change" placeholder="Max" value={bounds.change_pctMax} onChange={v => setBound('change_pctMax', v)} />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Market cap */}
-                    <div>
-                        <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Mkt cap (MK bn)</label>
-                        <div className="flex gap-1.5">
-                            <NumberField label="Min market cap" placeholder="Min" value={bounds.market_cap_bMin} onChange={v => setBound('market_cap_bMin', v)} />
-                            <NumberField label="Max market cap" placeholder="Max" value={bounds.market_cap_bMax} onChange={v => setBound('market_cap_bMax', v)} />
+                        {/* P/E */}
+                        <div>
+                            <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">P/E ratio</label>
+                            <div className="flex gap-1.5">
+                                <NumberField label="Min P/E" placeholder="Min" value={bounds.pe_ratioMin} onChange={v => setBound('pe_ratioMin', v)} />
+                                <NumberField label="Max P/E" placeholder="Max" value={bounds.pe_ratioMax} onChange={v => setBound('pe_ratioMax', v)} />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* % from 52w high */}
-                    <div>
-                        <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">% from 52w high</label>
-                        <div className="flex gap-1.5">
-                            <NumberField label="Min % from high" placeholder="Min" value={bounds.from_highMin} onChange={v => setBound('from_highMin', v)} />
-                            <NumberField label="Max % from high" placeholder="Max" value={bounds.from_highMax} onChange={v => setBound('from_highMax', v)} />
+                        {/* Market cap */}
+                        <div>
+                            <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">Mkt cap (MK bn)</label>
+                            <div className="flex gap-1.5">
+                                <NumberField label="Min market cap" placeholder="Min" value={bounds.market_cap_bMin} onChange={v => setBound('market_cap_bMin', v)} />
+                                <NumberField label="Max market cap" placeholder="Max" value={bounds.market_cap_bMax} onChange={v => setBound('market_cap_bMax', v)} />
+                            </div>
                         </div>
-                    </div>
 
-                    {/* % from 52w low */}
-                    <div>
-                        <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">% from 52w low</label>
-                        <div className="flex gap-1.5">
-                            <NumberField label="Min % from low" placeholder="Min" value={bounds.from_lowMin} onChange={v => setBound('from_lowMin', v)} />
-                            <NumberField label="Max % from low" placeholder="Max" value={bounds.from_lowMax} onChange={v => setBound('from_lowMax', v)} />
+                        {/* % from 52w high */}
+                        <div>
+                            <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">% from 52w high</label>
+                            <div className="flex gap-1.5">
+                                <NumberField label="Min % from high" placeholder="Min" value={bounds.from_highMin} onChange={v => setBound('from_highMin', v)} />
+                                <NumberField label="Max % from high" placeholder="Max" value={bounds.from_highMax} onChange={v => setBound('from_highMax', v)} />
+                            </div>
+                        </div>
+
+                        {/* % from 52w low */}
+                        <div>
+                            <label className="mb-1 block text-[11px] font-medium text-(--color-text-tertiary)">% from 52w low</label>
+                            <div className="flex gap-1.5">
+                                <NumberField label="Min % from low" placeholder="Min" value={bounds.from_lowMin} onChange={v => setBound('from_lowMin', v)} />
+                                <NumberField label="Max % from low" placeholder="Max" value={bounds.from_lowMax} onChange={v => setBound('from_lowMax', v)} />
+                            </div>
                         </div>
                     </div>
                 </div>
