@@ -17,8 +17,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react'
 import { CounterOverviewTabs } from '@/components/markets/CounterOverviewTabs'
+import { WatchlistButton } from '@/components/watchlist/WatchlistButton'
 
 export const revalidate = 3600
 
@@ -71,6 +73,8 @@ export default async function CounterPage({
 }) {
     const { symbol } = await params
     const supabase = getServiceClient()
+    const sessionClient = await createSessionClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
 
     const { data: counter } = await supabase
         .from('mse_counters')
@@ -79,6 +83,17 @@ export default async function CounterPage({
         .single()
 
     if (!counter) notFound()
+
+    let isWatched = false
+    if (user) {
+        const { data: watchRow } = await sessionClient
+            .from('watchlist_items')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('counter_id', counter.id)
+            .maybeSingle()
+        isWatched = !!watchRow
+    }
 
     // Latest two price rows: [0] = today/most recent, [1] = previous
     // close. Also carries the daily-changing fields the detail-page
@@ -141,7 +156,7 @@ export default async function CounterPage({
 
     const { data: rawNews } = await supabase
         .from('news_items')
-        .select('headline, summary, source_name, source_url, published_at, image_url')
+        .select('headline, summary, source_name, source_url, published_at')
         .eq('counter_id', counter.id)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -188,6 +203,12 @@ export default async function CounterPage({
                                 {counter.sector}
                             </span>
                         )}
+                        <WatchlistButton
+                            counterId={counter.id}
+                            isLoggedIn={!!user}
+                            initialWatched={isWatched}
+                            size={19}
+                        />
                     </div>
                     <p className="mt-0.5 text-[14px] text-(--color-text-secondary)">{counter.company_name}</p>
                 </div>

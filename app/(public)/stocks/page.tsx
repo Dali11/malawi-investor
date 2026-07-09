@@ -6,6 +6,7 @@
 // next.config.ts for the redirect). Sorting is client-side via StocksTable.
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createClient as createSessionClient } from '@/lib/supabase/server'
 import { StocksTable } from './StocksTable'
 
 
@@ -20,6 +21,21 @@ function getServiceClient() {
 
 export default async function MSEPage() {
     const supabase = getServiceClient()
+    const sessionClient = await createSessionClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+
+    // Reading watchlist_items requires the user's own session (RLS is
+    // scoped to auth.uid()) — the service-role client above bypasses
+    // RLS entirely and isn't tied to a session, so this has to go
+    // through sessionClient specifically, not supabase.
+    let watchedCounterIds: number[] = []
+    if (user) {
+        const { data: watchlist } = await sessionClient
+            .from('watchlist_items')
+            .select('counter_id')
+            .eq('user_id', user.id)
+        watchedCounterIds = (watchlist ?? []).map((w) => w.counter_id)
+    }
 
     // 1. Latest price/detail row per counter
     const { data: rawPrices } = await supabase
@@ -64,6 +80,7 @@ export default async function MSEPage() {
         .map((p: any) => {
             const range = rangeMap.get(p.counter_id)
             return {
+                counter_id: p.counter_id as number,
                 symbol: p.mse_counters.symbol as string,
                 company_name: p.mse_counters.company_name as string,
                 sector: (p.mse_counters.sector ?? '—') as string,
@@ -99,7 +116,7 @@ export default async function MSEPage() {
             </div>
 
             {/* Sortable table */}
-            <StocksTable stocks={stocks} />
+            <StocksTable stocks={stocks} watchedCounterIds={watchedCounterIds} isLoggedIn={!!user} />
         </div>
     )
 }

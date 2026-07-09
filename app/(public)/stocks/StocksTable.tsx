@@ -4,8 +4,10 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { WatchlistButton } from '@/components/watchlist/WatchlistButton'
 
 export type StockRow = {
+    counter_id: number
     symbol: string
     company_name: string
     sector: string
@@ -97,7 +99,16 @@ const HIDE_CLASS: Record<string, string> = {
     lg: 'hidden lg:table-cell',
 }
 
-export function StocksTable({ stocks }: { stocks: StockRow[] }) {
+export function StocksTable({
+    stocks,
+    watchedCounterIds = [],
+    isLoggedIn = false,
+}: {
+    stocks: StockRow[]
+    watchedCounterIds?: number[]
+    isLoggedIn?: boolean
+}) {
+    const watchedSet = useMemo(() => new Set(watchedCounterIds), [watchedCounterIds])
     const [sortKey, setSortKey] = useState<SortKey>('symbol')
     const [sortDir, setSortDir] = useState<SortDir>('asc')
     const [search, setSearch] = useState('')
@@ -153,6 +164,7 @@ export function StocksTable({ stocks }: { stocks: StockRow[] }) {
                 <table className="w-full min-w-[420px] border-collapse text-left">
                     <thead>
                         <tr className="border-b-[0.5px] border-(--color-border-tertiary) bg-(--color-background-secondary)">
+                            <th className="w-8 px-2 py-2.5" aria-hidden="true" />
                             {COLUMNS.map(col => (
                                 <th
                                     key={col.key}
@@ -176,7 +188,7 @@ export function StocksTable({ stocks }: { stocks: StockRow[] }) {
                     <tbody>
                         {sorted.length === 0 ? (
                             <tr>
-                                <td colSpan={COLUMNS.length} className="px-4 py-10 text-center text-[13px] text-(--color-text-tertiary)">
+                                <td colSpan={COLUMNS.length + 1} className="px-4 py-10 text-center text-[13px] text-(--color-text-tertiary)">
                                     No counters match &ldquo;{search}&rdquo;
                                 </td>
                             </tr>
@@ -200,6 +212,16 @@ export function StocksTable({ stocks }: { stocks: StockRow[] }) {
                                         key={s.symbol}
                                         className={`group transition-colors hover:bg-(--color-background-secondary) ${i < sorted.length - 1 ? 'border-b-[0.5px] border-(--color-border-tertiary)' : ''}`}
                                     >
+                                        {/* Watchlist star */}
+                                        <td className="px-2 py-3">
+                                            <WatchlistButton
+                                                counterId={s.counter_id}
+                                                isLoggedIn={isLoggedIn}
+                                                initialWatched={watchedSet.has(s.counter_id)}
+                                                size={15}
+                                            />
+                                        </td>
+
                                         {/* Symbol */}
                                         <td className="px-3 py-3 whitespace-nowrap">
                                             <Link
