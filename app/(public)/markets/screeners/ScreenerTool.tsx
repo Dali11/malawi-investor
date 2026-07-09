@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
     ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, X,
-    Download, Columns3, Scale, Link2, Check,
+    Download, Columns3, Scale, Link2, Check, Search,
 } from 'lucide-react'
 
 export type ScreenerStock = {
@@ -195,6 +195,7 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
 
     const [selectedSectors, setSelectedSectors] = useState<string[]>([])
     const [sectorMenuOpen, setSectorMenuOpen] = useState(false)
+    const [search, setSearch] = useState('')
     const [filtersOpen, setFiltersOpen] = useState(false) // collapsed by default on mobile; always expanded from sm: up
     const [bounds, setBounds] = useState<Bounds>(EMPTY_BOUNDS)
     const [sortKey, setSortKey] = useState<SortKey>('symbol')
@@ -216,6 +217,8 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
     /* eslint-disable react-hooks/set-state-in-effect -- one-time URL hydration on mount, see comment above */
     useEffect(() => {
         const params = readParamsFromLocation()
+        const q = params.get('q')
+        if (q) setSearch(q)
         const sec = params.get('sectors')
         if (sec) setSelectedSectors(sec.split(',').filter(Boolean))
 
@@ -239,6 +242,7 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
     useEffect(() => {
         if (!hydrated.current) return
         const params = new URLSearchParams()
+        if (search.trim()) params.set('q', search.trim())
         if (selectedSectors.length) params.set('sectors', selectedSectors.join(','))
         for (const [key, value] of Object.entries(bounds)) {
             if (value.trim() !== '') params.set(key, value)
@@ -248,7 +252,7 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
         const qs = params.toString()
         const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname
         window.history.replaceState(null, '', url)
-    }, [selectedSectors, bounds, sortKey, sortDir])
+    }, [search, selectedSectors, bounds, sortKey, sortDir])
 
     // ---- close the sector/column dropdowns on outside click or Escape ----
     useEffect(() => {
@@ -287,12 +291,13 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
     }
 
     function resetFilters() {
+        setSearch('')
         setSelectedSectors([])
         setBounds(EMPTY_BOUNDS)
     }
 
     const activeFilterCount =
-        selectedSectors.length + Object.values(bounds).filter(v => v.trim() !== '').length
+        (search.trim() ? 1 : 0) + selectedSectors.length + Object.values(bounds).filter(v => v.trim() !== '').length
 
     function handleSort(key: SortKey) {
         if (key === sortKey) {
@@ -316,8 +321,10 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
         const fromHighMax = parseBound(bounds.from_highMax)
         const fromLowMin = parseBound(bounds.from_lowMin)
         const fromLowMax = parseBound(bounds.from_lowMax)
+        const q = search.trim().toLowerCase()
 
         return stocks.filter(s => {
+            if (q && !s.symbol.toLowerCase().includes(q) && !s.company_name.toLowerCase().includes(q)) return false
             if (selectedSectors.length && !selectedSectors.includes(s.sector)) return false
             if (priceMin != null && s.price < priceMin) return false
             if (priceMax != null && s.price > priceMax) return false
@@ -333,7 +340,7 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
             if (fromLowMax != null && (pctFromLow(s) ?? Infinity) > fromLowMax) return false
             return true
         })
-    }, [stocks, selectedSectors, bounds])
+    }, [stocks, search, selectedSectors, bounds])
 
     const sorted = useMemo(() => {
         return [...filtered].sort((a, b) => {
@@ -450,6 +457,29 @@ export function ScreenerTool({ stocks }: { stocks: ScreenerStock[] }) {
 
     return (
         <div className="space-y-3">
+            {/* Search */}
+            <div className="relative">
+                <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-(--color-text-tertiary)" />
+                <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search symbol or company"
+                    aria-label="Search symbol or company"
+                    className="w-full rounded-(--border-radius-md) border-[0.5px] border-(--color-border-secondary) bg-(--color-background-primary) py-2 pl-8 pr-8 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-tertiary) outline-none focus:border-(--color-border-primary)"
+                />
+                {search && (
+                    <button
+                        type="button"
+                        onClick={() => setSearch('')}
+                        aria-label="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-(--color-text-tertiary) hover:text-(--color-text-primary)"
+                    >
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-2">
                 <ToolbarButton
