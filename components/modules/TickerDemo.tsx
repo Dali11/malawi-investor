@@ -16,6 +16,8 @@ const copy = {
     en: {
         statusLive: 'live, updates every 2s',
         statusPaused: 'paused',
+        counterLabel: 'Counter',
+        symbolNote: 'The ticker symbol, a short code identifying this counter on the exchange',
         lastPriceNote: "Last price, and how far that is from yesterday's close",
         dayRange: 'Day range',
         dayRangeNote: 'lowest and highest price traded today',
@@ -28,6 +30,8 @@ const copy = {
     ny: {
         statusLive: 'pakadali pano, zikusintha pa masekondi 2',
         statusPaused: 'yaimitsidwa',
+        counterLabel: 'Counter',
+        symbolNote: 'Chizindikiro cha counter, dzina lalifupi loyimira kampani iyi pa msika',
         lastPriceNote: 'Mtengo womaliza, ndi kusiyana kwake ndi kutseka kwa dzulo',
         dayRange: 'Mtengo wa lero',
         dayRangeNote: 'mtengo wotsika kwambiri ndi wapamwamba kwambiri lero',
@@ -102,9 +106,13 @@ export default function TickerDemo({
     return (
         <div className="rounded-xl border border-(--color-border-tertiary) bg-(--color-background-secondary) p-5 my-6">
             <div className="flex justify-between items-baseline mb-1">
-                <p className="text-base font-medium text-(--color-text-primary)">NBM</p>
+                <div>
+                    <p className="text-xs text-(--color-text-secondary) mb-0.5">{t.counterLabel}</p>
+                    <p className="text-base font-medium text-(--color-text-primary)">NBM</p>
+                </div>
                 <p className="text-xs text-(--color-text-tertiary)">{frozen ? t.statusPaused : t.statusLive}</p>
             </div>
+            <p className="text-[11px] text-(--color-text-tertiary) mb-4">{t.symbolNote}</p>
 
             <div className="flex items-baseline gap-2.5 mb-0.5">
                 <p className="text-2xl font-medium text-(--color-text-primary)">{fmtMK(price)}</p>
